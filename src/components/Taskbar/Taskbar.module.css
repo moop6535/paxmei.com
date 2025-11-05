@@ -1,0 +1,75 @@
+.taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background-color: rgba(0, 0, 0, 0.95);
+  border-top: 1px solid var(--color-border);
+  backdrop-filter: blur(10px);
+  z-index: var(--z-index-dock);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-sm);
+}
+
+.tasks {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  height: 36px;
+  padding: 0 var(--spacing-md);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.task:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
+}
+
+.task.active {
+  background-color: rgba(0, 255, 255, 0.1);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.task.minimized {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.task.closed {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.taskLabel {
+  white-space: nowrap;
+}
+
+.taskIndicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.task.active .taskIndicator {
+  opacity: 1;
+}

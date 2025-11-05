@@ -19,12 +19,13 @@ html {
 
 body {
   font-family: var(--font-family-sans);
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-normal);
   color: var(--color-text-primary);
   background-color: var(--color-bg-primary);
   overflow-x: hidden;
+  letter-spacing: -0.01em; /* Tighter tracking for monospace */
 }
 
 /* Typography */
@@ -40,8 +41,8 @@ h6 {
 }
 
 h1 {
-  font-size: var(--font-size-hero);
-  font-weight: var(--font-weight-black);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
 }
 
 h2 {

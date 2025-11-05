@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useParticles } from '@hooks/useParticles';
+import Taskbar from '@components/Taskbar';
 import styles from './Desktop.module.css';
 
 interface DesktopProps {
@@ -19,6 +20,7 @@ export default function Desktop({ children }: DesktopProps) {
     <div className={styles.desktop}>
       <canvas ref={canvasRef} className={styles.canvas} />
       <div className={styles.content}>{children}</div>
+      <Taskbar />
     </div>
   );
 }
