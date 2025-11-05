@@ -1,0 +1,82 @@
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-nav-height);
+  background-color: rgba(0, 0, 0, 0.95);
+  border-top: 1px solid var(--color-border);
+  z-index: var(--z-index-dock);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.tabs {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 var(--spacing-sm);
+}
+
+.tab {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  min-height: var(--touch-target-min);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  padding: var(--spacing-xs);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab:active {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.tab.active {
+  color: var(--color-accent);
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+}
+
+.indicator {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background-color: var(--color-accent);
+  border-radius: 2px 2px 0 0;
+}
+
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: var(--color-text-primary);
+  }
+}
+
+/* Ensure touch targets on mobile */
+@media (max-width: 767px) {
+  .tab {
+    min-width: var(--touch-target-min);
+  }
+}

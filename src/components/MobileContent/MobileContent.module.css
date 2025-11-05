@@ -1,0 +1,25 @@
+.content {
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+}
+
+.title {
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+}
+
+.inner {
+  width: 100%;
+}
+
+/* Remove window-specific styling on mobile */
+@media (max-width: 767px) {
+  .content {
+    /* Full-width, no max-width constraint */
+    max-width: none;
+  }
+}

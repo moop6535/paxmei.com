@@ -1,0 +1,50 @@
+.container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  background-color: var(--color-bg-primary);
+  overflow: hidden;
+}
+
+.content {
+  position: relative;
+  width: 100%;
+  height: calc(100% - var(--mobile-nav-height));
+  overflow: hidden;
+}
+
+.section {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  transition: opacity var(--transition-fast), visibility var(--transition-fast);
+  padding: var(--spacing-md);
+  padding-bottom: calc(var(--spacing-md) + var(--mobile-nav-height));
+}
+
+.section.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Prevent overscroll bounce on iOS */
+.section {
+  overscroll-behavior: contain;
+}
+
+/* Ensure proper scrolling on mobile */
+@media (max-width: 767px) {
+  .content {
+    /* Use fixed height to avoid viewport height issues on mobile */
+    height: calc(100vh - var(--mobile-nav-height));
+    height: calc(100dvh - var(--mobile-nav-height));
+  }
+}
