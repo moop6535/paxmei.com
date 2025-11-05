@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import Landing from './Landing';
 
 describe('Landing Page', () => {
@@ -31,32 +32,52 @@ describe('Landing Page', () => {
   });
 
   it('renders without crashing', () => {
-    render(<Landing />);
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>
+    );
     // Check for Bio window title
     expect(screen.getByText('Bio')).toBeInTheDocument();
   });
 
   it('displays three main windows', () => {
-    render(<Landing />);
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>
+    );
     expect(screen.getByText('Bio')).toBeInTheDocument();
     expect(screen.getByText('Blog')).toBeInTheDocument();
     expect(screen.getByText('Portfolio')).toBeInTheDocument();
   });
 
   it('displays bio content', () => {
-    render(<Landing />);
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>
+    );
     expect(screen.getByText('Pax Mei')).toBeInTheDocument();
     expect(screen.getByText('Developer & Writer')).toBeInTheDocument();
   });
 
   it('displays blog posts', () => {
-    render(<Landing />);
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>
+    );
     expect(screen.getByText('Recent Posts')).toBeInTheDocument();
     expect(screen.getByText('Welcome to paxmei.com')).toBeInTheDocument();
   });
 
   it('displays portfolio projects', () => {
-    render(<Landing />);
+    render(
+      <MemoryRouter>
+        <Landing />
+      </MemoryRouter>
+    );
     expect(screen.getByText('Projects')).toBeInTheDocument();
     expect(screen.getByText('paxmei.com')).toBeInTheDocument();
   });

@@ -1,0 +1,58 @@
+.blogList {
+  display: flex;
+  flex-direction: column;
+}
+
+.heading {
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.posts {
+  display: flex;
+  flex-direction: column;
+}
+
+.post {
+  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.post.withBorder {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.postLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  margin-bottom: var(--spacing-xs);
+}
+
+.postTitle {
+  margin: 0;
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  transition: color var(--transition-fast);
+}
+
+.postLink:hover .postTitle {
+  color: var(--color-accent);
+}
+
+.postDate {
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-small);
+  font-family: var(--font-family-mono);
+  color: var(--color-text-tertiary);
+}
+
+.postExcerpt {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
