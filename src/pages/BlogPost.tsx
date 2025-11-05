@@ -22,26 +22,22 @@ export default function BlogPost() {
   const { meta, content, isLoading, error } = useBlogPost(slug || '');
   const openWindow = useWindowStore((state) => state.openWindow);
   const toggleMaximize = useWindowStore((state) => state.toggleMaximize);
-  const toggleMinimize = useWindowStore((state) => state.toggleMinimize);
-  const windows = useWindowStore((state) => state.windows);
+  const setMinimized = useWindowStore((state) => state.setMinimized);
 
-  // Initialize blog-post window maximized and minimize other windows when component mounts
+  // Initialize blog-post window maximized and minimize other windows when slug changes
   useEffect(() => {
     openWindow('blog-post', { x: 150, y: 100 }, { width: 700, height: 600 });
 
-    // Minimize core windows if they're not already minimized
+    // Minimize core windows
     ['bio', 'blog', 'portfolio'].forEach((id) => {
-      const window = windows[id];
-      if (window && !window.isMinimized) {
-        toggleMinimize(id);
-      }
+      setMinimized(id, true);
     });
 
     // Maximize blog-post after a brief delay to ensure window is created
     setTimeout(() => {
       toggleMaximize('blog-post');
     }, 0);
-  }, [openWindow, toggleMaximize, toggleMinimize, windows]);
+  }, [slug, openWindow, toggleMaximize, setMinimized]);
 
   if (isLoading) {
     return (

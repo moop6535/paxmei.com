@@ -20,6 +20,7 @@ interface WindowStore {
   // Actions
   bringToFront: (id: string) => void;
   toggleMinimize: (id: string) => void;
+  setMinimized: (id: string, minimized: boolean) => void;
   toggleMaximize: (id: string) => void;
   closeWindow: (id: string) => void;
   openWindow: (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => void;
@@ -77,6 +78,18 @@ export const useWindowStore = create<WindowStore>()(
             [id]: {
               ...state.windows[id],
               isMinimized: !state.windows[id].isMinimized,
+            },
+          },
+        }));
+      },
+
+      setMinimized: (id, minimized) => {
+        set((state) => ({
+          windows: {
+            ...state.windows,
+            [id]: {
+              ...state.windows[id],
+              isMinimized: minimized,
             },
           },
         }));
