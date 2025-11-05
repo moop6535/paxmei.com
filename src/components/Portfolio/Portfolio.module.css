@@ -72,3 +72,31 @@
   color: var(--color-text-tertiary);
   font-size: var(--font-size-base);
 }
+
+/* Mobile optimizations */
+@media (max-width: 767px) {
+  .projects {
+    gap: var(--spacing-xl);
+  }
+
+  .project {
+    gap: var(--spacing-md);
+  }
+
+  .link {
+    /* Ensure minimum touch target size */
+    min-height: var(--touch-target-min);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .projectDescription {
+    line-height: 1.7; /* Increased for mobile readability */
+  }
+
+  .tech {
+    font-size: var(--font-size-small); /* Slightly larger on mobile */
+    padding: var(--spacing-xs);
+  }
+}

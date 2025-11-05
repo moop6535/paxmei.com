@@ -58,8 +58,34 @@
   text-decoration: none;
   font-size: 1rem; /* 16px */
   transition: color var(--transition-fast);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  display: inline-block;
 }
 
 .socialLink:hover {
   color: var(--color-accent);
+}
+
+/* Mobile optimizations */
+@media (max-width: 767px) {
+  .bio {
+    gap: var(--spacing-lg);
+  }
+
+  .socialLink {
+    /* Ensure minimum touch target size */
+    min-height: var(--touch-target-min);
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-sm);
+  }
+
+  .socialLinks {
+    gap: var(--spacing-sm);
+  }
+
+  .tagline,
+  .description {
+    line-height: 1.8; /* Increased for mobile readability */
+  }
 }

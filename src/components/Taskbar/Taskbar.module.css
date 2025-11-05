@@ -73,3 +73,23 @@
 .task.active .taskIndicator {
   opacity: 1;
 }
+
+/* Tablet optimizations - larger touch targets */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .taskbar {
+    height: 56px; /* Taller for touch targets */
+    padding: 0 var(--spacing-md);
+  }
+
+  .task {
+    /* Increase to minimum touch target size */
+    min-height: var(--touch-target-min);
+    height: var(--touch-target-min);
+    padding: 0 var(--spacing-lg);
+    font-size: var(--font-size-base);
+  }
+
+  .tasks {
+    gap: var(--spacing-sm);
+  }
+}

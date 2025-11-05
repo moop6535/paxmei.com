@@ -53,3 +53,26 @@
 .button:active {
   transform: scale(0.95);
 }
+
+/* Tablet optimizations - larger touch targets */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .chrome {
+    height: calc(var(--window-chrome-height) + 8px); /* Slightly taller */
+    padding: 0 var(--spacing-md);
+  }
+
+  .button {
+    /* Increase to minimum touch target size */
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+    font-size: 20px;
+  }
+
+  .controls {
+    gap: var(--spacing-sm);
+  }
+
+  .title {
+    font-size: var(--font-size-base);
+  }
+}
