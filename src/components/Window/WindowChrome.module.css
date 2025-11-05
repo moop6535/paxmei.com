@@ -10,7 +10,7 @@
 }
 
 .chrome.draggable {
-  cursor: move;
+  cursor: grab;
 }
 
 .title {

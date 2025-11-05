@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useWindowStore } from '@stores/windowStore';
+import { useDraggable } from '@hooks/useDraggable';
 import WindowChrome from './WindowChrome';
 import WindowContent from './WindowContent';
 import styles from './Window.module.css';
@@ -29,8 +30,19 @@ export default function Window({
   const bringToFront = useWindowStore((state) => state.bringToFront);
   const toggleMinimize = useWindowStore((state) => state.toggleMinimize);
   const closeWindow = useWindowStore((state) => state.closeWindow);
+  const updatePosition = useWindowStore((state) => state.updatePosition);
   const getZIndex = useWindowStore((state) => state.getZIndex);
   const windowStack = useWindowStore((state) => state.windowStack);
+
+  // Draggable hook
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialPosition: window?.position || { x: 0, y: 0 },
+    onDragEnd: (pos) => {
+      updatePosition(id, pos);
+    },
+    constrainToViewport: true,
+    windowSize: window?.size || { width: 300, height: 200 },
+  });
 
   if (!window || !window.isVisible) {
     return null;
@@ -53,26 +65,43 @@ export default function Window({
     closeWindow(id);
   };
 
+  const handleChromeMouseDown = (e: React.MouseEvent) => {
+    // Bring to front when starting to drag
+    if (!isFocused) {
+      bringToFront(id);
+    }
+
+    // Start dragging if enabled
+    if (draggable) {
+      handleMouseDown(e);
+    }
+  };
+
+  // Use dragged position if dragging, otherwise use store position
+  const displayPosition = draggable && isDragging ? position : window.position;
+
   return (
     <div
       className={`${styles.window} ${isFocused ? styles.focused : ''} ${
         window.isMinimized ? styles.minimized : ''
-      } ${className}`}
+      } ${isDragging ? styles.dragging : ''} ${className}`}
       style={{
-        left: `${window.position.x}px`,
-        top: `${window.position.y}px`,
+        left: `${displayPosition.x}px`,
+        top: `${displayPosition.y}px`,
         width: `${window.size.width}px`,
         height: `${window.size.height}px`,
         zIndex,
+        willChange: isDragging ? 'transform' : 'auto',
       }}
       onClick={handleClick}
     >
       <WindowChrome
         title={title}
         onMinimize={minimizable ? handleMinimize : undefined}
-        onMaximize={resizable ? undefined : undefined} // Not implemented in Phase 3
+        onMaximize={resizable ? undefined : undefined}
         onClose={closeable ? handleClose : undefined}
         draggable={draggable}
+        onMouseDown={handleChromeMouseDown}
       />
       <WindowContent>{children}</WindowContent>
     </div>

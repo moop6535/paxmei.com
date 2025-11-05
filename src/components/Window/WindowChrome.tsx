@@ -6,6 +6,7 @@ interface WindowChromeProps {
   onMaximize?: () => void;
   onClose?: () => void;
   draggable?: boolean;
+  onMouseDown?: (e: React.MouseEvent) => void;
 }
 
 export default function WindowChrome({
@@ -14,15 +15,24 @@ export default function WindowChrome({
   onMaximize,
   onClose,
   draggable = false,
+  onMouseDown,
 }: WindowChromeProps) {
+  const handleButtonClick = (e: React.MouseEvent, callback?: () => void) => {
+    e.stopPropagation(); // Prevent drag from starting when clicking buttons
+    callback?.();
+  };
+
   return (
-    <div className={`${styles.chrome} ${draggable ? styles.draggable : ''}`}>
+    <div
+      className={`${styles.chrome} ${draggable ? styles.draggable : ''}`}
+      onMouseDown={onMouseDown}
+    >
       <div className={styles.title}>{title}</div>
       <div className={styles.controls}>
         {onMinimize && (
           <button
             className={styles.button}
-            onClick={onMinimize}
+            onClick={(e) => handleButtonClick(e, onMinimize)}
             aria-label="Minimize"
             title="Minimize"
           >
@@ -32,7 +42,7 @@ export default function WindowChrome({
         {onMaximize && (
           <button
             className={styles.button}
-            onClick={onMaximize}
+            onClick={(e) => handleButtonClick(e, onMaximize)}
             aria-label="Maximize"
             title="Maximize"
           >
@@ -42,7 +52,7 @@ export default function WindowChrome({
         {onClose && (
           <button
             className={`${styles.button} ${styles.close}`}
-            onClick={onClose}
+            onClick={(e) => handleButtonClick(e, onClose)}
             aria-label="Close"
             title="Close"
           >

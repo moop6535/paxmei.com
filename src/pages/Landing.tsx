@@ -5,7 +5,7 @@ export default function Landing() {
   return (
     <Desktop>
       {/* Bio Window */}
-      <Window id="bio" title="Bio" minimizable closeable>
+      <Window id="bio" title="Bio" draggable minimizable closeable>
         <h2>Pax Mei</h2>
         <h4>Developer & Writer</h4>
         <p style={{ color: 'var(--color-accent)', marginTop: '1rem' }}>
@@ -28,7 +28,7 @@ export default function Landing() {
       </Window>
 
       {/* Blog Window */}
-      <Window id="blog" title="Blog" minimizable closeable>
+      <Window id="blog" title="Blog" draggable minimizable closeable>
         <h3>Recent Posts</h3>
         <div style={{ marginTop: '1.5rem' }}>
           <article style={{ marginBottom: '2rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem' }}>
@@ -64,7 +64,7 @@ export default function Landing() {
       </Window>
 
       {/* Portfolio Window */}
-      <Window id="portfolio" title="Portfolio" minimizable closeable>
+      <Window id="portfolio" title="Portfolio" draggable minimizable closeable>
         <h3>Projects</h3>
         <div style={{ marginTop: '1.5rem' }}>
           <article style={{ marginBottom: '2rem' }}>

@@ -15,6 +15,11 @@
   box-shadow: var(--shadow-window-focused);
 }
 
+.window.dragging {
+  user-select: none;
+  cursor: grabbing;
+}
+
 .window.minimized {
   transform: scale(0);
   opacity: 0;
