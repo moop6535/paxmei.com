@@ -786,7 +786,508 @@ Each phase will follow the IDE loop (Implement → Defend → Evaluate).
 
 ## 18. Self-Review Notes
 
-_(To be added after initial self-review)_
+### Review Date: 2025-11-05
+
+### Identified Gaps & Improvements
+
+#### Critical Issues Addressed
+1. **Mobile Experience** - Added detailed mobile specification (Section 19)
+2. **Markdown Loading Strategy** - Clarified implementation approach (Section 20)
+3. **Window Initial State** - Specified default behavior (Section 21)
+4. **Routing Configuration** - Added routing details for Cloudflare Pages (Section 22)
+
+#### Important Clarifications Added
+5. **Window Z-Index Management** - Detailed algorithm (Section 23)
+6. **Dragging Constraints** - Specified edge behavior (Section 24)
+7. **Portfolio Data Structure** - Added clear schema (Section 25)
+8. **Bio Content Example** - Provided default structure (Section 26)
+9. **Testing Strategy** - Outlined approach for Defend phase (Section 27)
+10. **404 Handling** - Added error page spec (Section 28)
+
+#### Minor Enhancements
+11. **Particle Responsiveness** - Particle count scales with viewport
+12. **Font Loading** - Strategy specified (system fonts, no loading needed)
+13. **Build Optimization** - Added specific techniques (Section 29)
+
+### Confidence Level
+**High** - Specification is now comprehensive with all critical gaps addressed. Ready for user feedback.
+
+---
+
+## 19. Mobile Experience Specification
+
+### Problem
+Window dragging doesn't work well on touch devices, and multiple floating windows create UX confusion on small screens.
+
+### Solution: Responsive Layout Transformation
+
+#### Desktop (>= 1024px)
+- Full window system with dragging
+- All windows interactive
+- Dock at bottom
+
+#### Tablet (768px - 1023px)
+- Windows become fixed panels (no dragging)
+- Stacked vertically or in 2-column grid
+- Dock remains visible
+
+#### Mobile (< 768px)
+- Single-column layout
+- Windows become full-width cards
+- Dock transforms to hamburger menu or bottom nav
+- Blog and Portfolio become scrollable lists
+- Landing page: vertical scroll through Bio → Blog preview → Portfolio preview
+
+### Implementation Strategy
+```css
+/* Pseudo-code for responsive behavior */
+@media (max-width: 767px) {
+  .window {
+    position: static; /* Not floating */
+    width: 100%;
+    margin-bottom: 2rem;
+    transform: none; /* No dragging */
+  }
+
+  .dock {
+    position: fixed;
+    bottom: 0;
+    flex-direction: row; /* Horizontal nav bar */
+  }
+}
+```
+
+### Touch Interactions
+- Tap window: focus (doesn't bring to front, since no overlapping)
+- Swipe: scroll within window content
+- Pinch zoom: disabled (use fixed typography scale)
+
+---
+
+## 20. Markdown Loading Strategy
+
+### Approach: Dynamic Import with Build-Time Index
+
+**Rationale**: Balance between static site performance and SPA flexibility.
+
+#### Implementation Details
+
+1. **Build-Time Index Generation**:
+   - Use Vite plugin or custom script to scan `/content/posts/`
+   - Extract frontmatter from all `.md` files
+   - Generate `posts-index.json` with metadata only:
+     ```json
+     [
+       {
+         "slug": "my-first-post",
+         "title": "My First Post",
+         "date": "2025-11-05",
+         "excerpt": "A short description...",
+         "tags": ["react", "typescript"],
+         "published": true
+       }
+     ]
+     ```
+   - This JSON is imported at build time (fast)
+
+2. **Runtime Content Loading**:
+   - Blog list page loads `posts-index.json` (lightweight)
+   - When user clicks a post, dynamically import the markdown file:
+     ```typescript
+     const content = await import(`/content/posts/${slug}.md?raw`);
+     ```
+   - Use `?raw` Vite suffix to load as string
+   - Parse frontmatter and content on client
+
+3. **Vite Configuration**:
+   - No additional plugins needed (Vite handles `?raw` imports natively)
+   - For build-time index, create simple Node script in `scripts/generate-posts-index.js`
+   - Run as prebuild step in `package.json`:
+     ```json
+     "scripts": {
+       "prebuild": "node scripts/generate-posts-index.js",
+       "build": "tsc -b && vite build"
+     }
+     ```
+
+**Pros**:
+- Fast blog list load (just JSON metadata)
+- Lazy load full content (code-splitting)
+- No runtime Markdown parsing overhead (done once per page view)
+- Easy to add caching later
+
+**Cons**:
+- Requires build step for index
+- Not truly static (content loaded per route)
+
+**Alternative Considered**: Use `vite-plugin-markdown` to import Markdown as components, but this couples content too tightly to code structure.
+
+---
+
+## 21. Window Initial State
+
+### Default Behavior (Landing Page)
+
+**On First Load**:
+- All three windows are **open** and visible
+- Windows are positioned in cascading/tiled layout:
+  - **Bio Window**: Top-left (x: 50px, y: 50px)
+  - **Blog Window**: Top-right (x: 500px, y: 50px)
+  - **Portfolio Window**: Center (x: 275px, y: 300px)
+- **Bio Window** has initial focus (highest z-index)
+- Dock shows all three items as "active"
+
+**Rationale**:
+- Immediate showcase of content (no "empty desktop")
+- User sees the interface immediately
+- Demonstrates the window system without requiring interaction
+
+**Future Enhancement**:
+- Save window positions to `localStorage`
+- Restore last known state on return visit
+- Add "Reset Layout" button to dock
+
+### Z-Index Initial Values
+- Bio: `z-index: 3` (front)
+- Blog: `z-index: 2`
+- Portfolio: `z-index: 1`
+
+---
+
+## 22. Routing Configuration
+
+### Router Choice: `BrowserRouter`
+**Why**: Cleaner URLs, better for SEO, Cloudflare Pages supports it.
+
+### Cloudflare Pages Configuration
+Create `public/_redirects` file:
+```
+/* /index.html 200
+```
+This ensures all routes are served by `index.html` (SPA routing).
+
+### Route Structure
+```typescript
+<Routes>
+  <Route path="/" element={<Landing />} />
+  <Route path="/blog/:slug" element={<BlogPost />} />
+  <Route path="/portfolio/:slug" element={<PortfolioDetail />} />
+  <Route path="*" element={<NotFound />} />
+</Routes>
+```
+
+### Link Strategy
+- Internal navigation: Use `<Link>` from `react-router-dom`
+- External links (social, etc.): Use `<a>` with `target="_blank" rel="noopener noreferrer"`
+
+---
+
+## 23. Window Z-Index Management
+
+### Algorithm: Incremental Counter
+
+**State**:
+```typescript
+const [windowStack, setWindowStack] = useState<string[]>(['bio', 'blog', 'portfolio']);
+const [nextZIndex, setNextZIndex] = useState(4); // Starts at 4 (after initial 3 windows)
+```
+
+**Bring to Front**:
+```typescript
+function bringToFront(windowId: string) {
+  // Move window to end of array (highest z-index)
+  setWindowStack(prev => {
+    const filtered = prev.filter(id => id !== windowId);
+    return [...filtered, windowId];
+  });
+}
+```
+
+**Calculate Z-Index**:
+```typescript
+function getZIndex(windowId: string): number {
+  const index = windowStack.indexOf(windowId);
+  return index + 1; // z-index starts at 1
+}
+```
+
+**Why This Approach**:
+- Simple: No need to track individual z-index values
+- Scalable: Works with any number of windows
+- Predictable: Order of array determines z-index
+
+**Edge Case**: If z-index somehow exceeds browser limit (unlikely, but ~2^31), reset all indices. Not implementing unless needed.
+
+---
+
+## 24. Window Dragging Constraints
+
+### Viewport Boundaries
+
+**Behavior**: Windows cannot be dragged fully outside viewport. At minimum, the title bar must remain visible.
+
+**Rules**:
+1. **Minimum Visible Area**: At least 40px of title bar must be within viewport
+2. **X-Axis Clamping**:
+   ```typescript
+   const minX = -(windowWidth - 40);
+   const maxX = viewportWidth - 40;
+   const clampedX = Math.max(minX, Math.min(maxX, proposedX));
+   ```
+3. **Y-Axis Clamping**:
+   ```typescript
+   const minY = 0; // Top of viewport
+   const maxY = viewportHeight - 40; // Title bar must be visible
+   const clampedY = Math.max(minY, Math.min(maxY, proposedY));
+   ```
+
+**Rationale**:
+- Prevents "lost" windows
+- User can always grab title bar to reposition
+- Feels natural (like macOS window behavior)
+
+### Snap-to-Edge (Future Enhancement)
+- When window is dragged near edge (within 20px), snap to edge
+- Provides magnetic feel
+- Not included in v1
+
+---
+
+## 25. Portfolio Data Structure
+
+### Schema
+
+**File**: `/src/data/portfolio.ts` (or `/content/portfolio.json`)
+
+```typescript
+export interface PortfolioItem {
+  id: string; // Unique identifier, used in URL slug
+  title: string; // Project name
+  description: string; // Short description (1-2 sentences)
+  longDescription?: string; // Full description (markdown supported)
+  techStack: string[]; // Array of technologies (e.g., ["React", "TypeScript", "Vite"])
+  links: {
+    github?: string; // GitHub repo URL
+    demo?: string; // Live demo URL
+    article?: string; // Blog post URL
+  };
+  image?: string; // Screenshot or logo (path relative to /public)
+  featured: boolean; // Show in featured section?
+  startDate: string; // ISO date format (YYYY-MM-DD)
+  endDate?: string; // ISO date format, optional (for ongoing projects)
+  status: 'active' | 'completed' | 'archived'; // Project status
+}
+```
+
+**Example**:
+```typescript
+export const portfolio: PortfolioItem[] = [
+  {
+    id: 'paxmei-site',
+    title: 'paxmei.com',
+    description: 'Personal website with OS-brutalist design and draggable window system.',
+    techStack: ['React', 'TypeScript', 'Vite', 'Zustand', 'Canvas API'],
+    links: {
+      github: 'https://github.com/username/paxmei.com',
+      demo: 'https://paxmei.com',
+    },
+    featured: true,
+    startDate: '2025-11-05',
+    status: 'active',
+  },
+  // More projects...
+];
+```
+
+### Display Logic
+- **Portfolio List Window**: Show only `title`, `description`, and `techStack`
+- **Portfolio Detail Page**: Show all fields, render `longDescription` as Markdown
+
+---
+
+## 26. Bio Content Example
+
+### Structure
+
+```typescript
+export const bioData = {
+  name: "Pax Mei",
+  title: "Developer & Writer",
+  tagline: "Building sleek experiences and sharing insights.",
+  bio: `I'm a developer passionate about crafting unique web experiences.
+        I love exploring the intersection of design, performance, and usability.
+        When I'm not coding, I write about tech, design, and the creative process.`,
+  socialLinks: [
+    { platform: 'GitHub', url: 'https://github.com/username', icon: 'github' },
+    { platform: 'Twitter', url: 'https://twitter.com/username', icon: 'twitter' },
+    { platform: 'LinkedIn', url: 'https://linkedin.com/in/username', icon: 'linkedin' },
+    { platform: 'Email', url: 'mailto:hello@paxmei.com', icon: 'email' },
+  ],
+};
+```
+
+### Visual Layout (in Bio Window)
+```
+┌────────────────────────────────┐
+│ Bio                       [–][×]│
+├────────────────────────────────┤
+│                                │
+│   PAX MEI                      │  <- Large (h1, 48px)
+│   Developer & Writer           │  <- Medium (h4, 24px)
+│                                │
+│   Building sleek experiences   │  <- Tagline (h5, 20px)
+│   and sharing insights.        │
+│                                │
+│   [Bio paragraph...]           │  <- Body (16px)
+│                                │
+│   ── Connect                   │  <- Section divider
+│   • GitHub  • Twitter          │  <- Links (inline)
+│   • LinkedIn  • Email          │
+│                                │
+└────────────────────────────────┘
+```
+
+---
+
+## 27. Testing Strategy
+
+### Defend Phase Approach
+
+For each phase, write tests covering:
+
+#### Unit Tests (Vitest + React Testing Library)
+1. **Component Rendering**:
+   - Test each component renders without crashing
+   - Snapshot tests for visual regression (use sparingly)
+
+2. **Hook Logic**:
+   - `useDraggable`: Test position calculation, constraints
+   - `useParticles`: Test particle generation, movement
+   - `useWindowManager`: Test z-index management, focus
+
+3. **Utility Functions**:
+   - Markdown parsing helpers
+   - Date formatting
+   - URL slug generation
+
+#### Integration Tests
+1. **Window Interactions**:
+   - Click window → brings to front
+   - Drag window → position updates correctly
+   - Minimize/close → state updates
+
+2. **Navigation**:
+   - Click blog post → navigates to detail page
+   - Back button → returns to landing
+   - 404 page renders for invalid routes
+
+3. **Content Loading**:
+   - Blog post loads and renders markdown
+   - Syntax highlighting works for code blocks
+
+#### E2E Tests (Optional, use Playwright if time permits)
+1. **Full User Flow**:
+   - Load site → windows visible
+   - Drag window → position persists
+   - Click blog → post loads
+   - Navigate back → windows in correct state
+
+### Performance Tests
+- Lighthouse CI: Ensure scores remain > 90
+- FPS monitoring: Ensure particle animation stays at 60fps
+
+### Coverage Target
+- **Minimum**: 70% line coverage
+- **Goal**: 85%+ coverage for critical paths (window management, content loading)
+
+---
+
+## 28. 404 Error Page
+
+### Design
+
+**Full-Screen Window** with error message:
+
+```
+┌──────────────────────────────────────┐
+│ 404: Not Found              [×]      │
+├──────────────────────────────────────┤
+│                                      │
+│         404                          │  <- Large (h1, 96px)
+│         Page Not Found               │  <- h3, 48px
+│                                      │
+│         The page you're looking for  │  <- Body, 20px
+│         doesn't exist or has been    │
+│         moved.                       │
+│                                      │
+│         [← Back to Home]             │  <- Button/Link
+│                                      │
+└──────────────────────────────────────┘
+```
+
+### Implementation
+```typescript
+function NotFound() {
+  return (
+    <Desktop>
+      <Window
+        id="404"
+        title="404: Not Found"
+        draggable={false}
+        closeable={false}
+        defaultPosition={{ x: "center", y: "center" }}
+      >
+        <div className={styles.notFound}>
+          <h1>404</h1>
+          <h3>Page Not Found</h3>
+          <p>The page you're looking for doesn't exist or has been moved.</p>
+          <Link to="/">← Back to Home</Link>
+        </div>
+      </Window>
+    </Desktop>
+  );
+}
+```
+
+---
+
+## 29. Build Optimization Techniques
+
+### Code Splitting
+1. **Route-Based Splitting**:
+   ```typescript
+   const Landing = lazy(() => import('./pages/Landing'));
+   const BlogPost = lazy(() => import('./pages/BlogPost'));
+   ```
+
+2. **Component-Level Splitting** (for heavy components):
+   - Particle background (lazy load if not immediately visible)
+   - Syntax highlighter (load only on blog post pages)
+
+### Tree Shaking
+- Ensure all imports are ESM (not CommonJS)
+- Use named exports/imports
+- Vite handles this automatically
+
+### Asset Optimization
+1. **Images**:
+   - Use WebP format with PNG fallback
+   - Lazy load images below fold
+   - Consider using `loading="lazy"` attribute
+
+2. **Fonts**:
+   - System fonts only (no web font loading)
+   - No FOIT/FOUT issues
+
+### Bundle Analysis
+- Run `vite-bundle-visualizer` after each phase
+- Ensure no duplicate dependencies
+- Target: Main bundle < 150KB gzipped
+
+### Caching Strategy
+- Use Cloudflare Pages default caching
+- Set long-term cache headers for static assets
+- Version assets via Vite's hash naming
 
 ---
 
