@@ -1084,7 +1084,107 @@ The following features are explicitly **not** in this implementation plan but ca
 
 ## Self-Review Notes
 
-_(To be added after initial self-review)_
+### Review Date: 2025-11-05
+
+### Identified Improvements
+
+#### 1. Missing Dependency: gray-matter
+**Issue**: Phase 5 and 6 reference `gray-matter` for frontmatter parsing but it's not in the dependency list.
+**Fix**: Add `gray-matter` to Phase 1 dependencies.
+
+#### 2. Component File Organization
+**Issue**: Plan doesn't specify exact component file structure (index files, CSS modules).
+**Clarification Added**: Each component should follow this structure:
+```
+Component/
+├── Component.tsx
+├── Component.module.css
+└── index.ts (re-export)
+```
+
+#### 3. Error Boundary Strategy
+**Issue**: No error boundaries specified for handling React errors.
+**Addition**: Add ErrorBoundary wrapper in Phase 1, wrap each major page component.
+
+#### 4. TypeScript Strict Mode
+**Issue**: Not explicitly stated that strict mode should be enabled.
+**Clarification**: Verify `tsconfig.json` has `"strict": true` in Phase 1.
+
+#### 5. Performance Measurement Tools
+**Issue**: Mentions Lighthouse but doesn't specify how to run it in CI.
+**Addition**:
+- Install `@lhci/cli` as dev dependency
+- Add Lighthouse CI configuration in Phase 7
+- Run in GitHub Actions or local CI
+
+#### 6. CSS Module Naming Convention
+**Issue**: Doesn't specify naming pattern for CSS classes.
+**Clarification**: Use camelCase for class names, e.g., `.windowChrome`, `.titleBar`, `.closeButton`.
+
+#### 7. Particle System Cleanup
+**Issue**: Doesn't explicitly mention cleanup strategy for canvas context.
+**Addition**: In Phase 2, ensure `useEffect` cleanup properly cancels `requestAnimationFrame` and clears canvas context.
+
+#### 8. Window Dragging on Touch Devices
+**Issue**: Plan says "disable dragging on mobile" but doesn't specify how.
+**Clarification**: Use CSS `@media (pointer: coarse)` to detect touch devices and conditionally disable dragging.
+
+#### 9. Blog Post Build Script Timing
+**Issue**: `generate-posts-index.js` runs as prebuild, but dev server won't have updated index without restart.
+**Solution**: Add Vite plugin to watch `content/posts/` and regenerate index on change in dev mode.
+
+#### 10. Zustand DevTools
+**Issue**: No mention of debugging state management.
+**Addition**: Install Zustand DevTools middleware in Phase 3 for development debugging.
+
+### Additional Clarifications
+
+#### Phase 1 Enhanced Dependency List
+Add these to the installation tasks:
+- `gray-matter` - Frontmatter parsing
+- `@lhci/cli` - Lighthouse CI (dev)
+- `vite-plugin-watch` or custom plugin - Watch content folder
+
+#### Phase 2 Performance Benchmarking
+- Use Chrome DevTools Performance tab
+- Record 10-second session of particle animation
+- Verify no dropped frames
+- Target: Consistent 60 FPS (16.67ms per frame)
+
+#### Phase 3 State Management Pattern
+- Use Zustand with immer middleware for cleaner updates
+- Enable devtools in development only:
+  ```typescript
+  import { devtools } from 'zustand/middleware'
+
+  const useWindowStore = create(
+    devtools((set) => ({ ... }))
+  )
+  ```
+
+#### Phase 5 Content Organization
+- Bio data: Single source of truth, can be edited easily
+- Portfolio data: Array-based, easy to add projects
+- Blog posts: File-based, Markdown first
+- All content should be hot-reloadable in dev mode
+
+#### Phase 7 Accessibility Checklist
+- Focus visible on all interactive elements
+- Color contrast > 4.5:1 for body text, > 3:1 for large text
+- All images (if added) have meaningful alt text
+- No content flash or rapid animations (accessibility concern)
+- Skip link at top of page (keyboard users)
+
+### Risk Mitigation Updates
+
+#### New Risk Identified: Content Hot Reloading
+- **Risk**: Blog posts and data changes require server restart
+- **Impact**: Poor DX during development
+- **Mitigation**: Implement Vite plugin to watch content folder and trigger HMR
+- **Fallback**: Document that dev server needs restart after content changes
+
+### Confidence Level
+**High** - Plan is comprehensive with clear phases, acceptance criteria, and testing approach. All critical aspects covered. Ready for user feedback and implementation.
 
 ---
 
