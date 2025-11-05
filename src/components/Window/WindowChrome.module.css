@@ -1,0 +1,55 @@
+.chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--window-chrome-height);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--spacing-sm);
+  user-select: none;
+}
+
+.chrome.draggable {
+  cursor: move;
+}
+
+.title {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.controls {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.button {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  transition: color var(--transition-fast);
+}
+
+.button:hover {
+  color: var(--color-text-primary);
+}
+
+.button.close:hover {
+  color: #ff0000;
+}
+
+.button:active {
+  transform: scale(0.95);
+}

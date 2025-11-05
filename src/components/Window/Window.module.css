@@ -1,0 +1,26 @@
+.window {
+  position: absolute;
+  min-width: var(--window-min-width);
+  min-height: var(--window-min-height);
+  background-color: rgba(10, 10, 10, 0.95);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-none);
+  box-shadow: var(--shadow-window);
+  transition: box-shadow var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+}
+
+.window.focused {
+  box-shadow: var(--shadow-window-focused);
+}
+
+.window.minimized {
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.window.hidden {
+  display: none;
+}
