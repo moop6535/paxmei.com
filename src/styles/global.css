@@ -160,6 +160,10 @@ button:focus-visible {
   cursor: grabbing !important;
 }
 
+.cursor-resizing {
+  cursor: nwse-resize !important;
+}
+
 .cursor-move {
   cursor: move;
 }

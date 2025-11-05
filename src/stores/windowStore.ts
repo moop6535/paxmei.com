@@ -6,7 +6,11 @@ export interface WindowState {
   position: { x: number; y: number };
   size: { width: number; height: number };
   isMinimized: boolean;
+  isMaximized: boolean;
   isVisible: boolean;
+  // Store pre-maximized state for restoration
+  preMaximizedPosition?: { x: number; y: number };
+  preMaximizedSize?: { width: number; height: number };
 }
 
 interface WindowStore {
@@ -16,9 +20,11 @@ interface WindowStore {
   // Actions
   bringToFront: (id: string) => void;
   toggleMinimize: (id: string) => void;
+  toggleMaximize: (id: string) => void;
   closeWindow: (id: string) => void;
   openWindow: (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => void;
   updatePosition: (id: string, position: { x: number; y: number }) => void;
+  updateSize: (id: string, size: { width: number; height: number }) => void;
   getZIndex: (id: string) => number;
 }
 
@@ -28,6 +34,7 @@ const initialWindows: Record<string, WindowState> = {
     position: { x: 50, y: 50 },
     size: { width: 400, height: 500 },
     isMinimized: false,
+    isMaximized: false,
     isVisible: true,
   },
   blog: {
@@ -35,6 +42,7 @@ const initialWindows: Record<string, WindowState> = {
     position: { x: 500, y: 50 },
     size: { width: 450, height: 600 },
     isMinimized: false,
+    isMaximized: false,
     isVisible: true,
   },
   portfolio: {
@@ -42,6 +50,7 @@ const initialWindows: Record<string, WindowState> = {
     position: { x: 275, y: 300 },
     size: { width: 500, height: 400 },
     isMinimized: false,
+    isMaximized: false,
     isVisible: true,
   },
 };
@@ -114,6 +123,7 @@ export const useWindowStore = create<WindowStore>()(
                 position,
                 size,
                 isMinimized: false,
+                isMaximized: false,
                 isVisible: true,
               },
             },
@@ -132,6 +142,59 @@ export const useWindowStore = create<WindowStore>()(
             },
           },
         }));
+      },
+
+      updateSize: (id, size) => {
+        set((state) => ({
+          windows: {
+            ...state.windows,
+            [id]: {
+              ...state.windows[id],
+              size,
+            },
+          },
+        }));
+      },
+
+      toggleMaximize: (id) => {
+        set((state) => {
+          const window = state.windows[id];
+
+          if (window.isMaximized) {
+            // Restore to pre-maximized state
+            return {
+              windows: {
+                ...state.windows,
+                [id]: {
+                  ...window,
+                  isMaximized: false,
+                  position: window.preMaximizedPosition || window.position,
+                  size: window.preMaximizedSize || window.size,
+                  preMaximizedPosition: undefined,
+                  preMaximizedSize: undefined,
+                },
+              },
+            };
+          } else {
+            // Maximize - save current state and set to full viewport
+            return {
+              windows: {
+                ...state.windows,
+                [id]: {
+                  ...window,
+                  isMaximized: true,
+                  preMaximizedPosition: window.position,
+                  preMaximizedSize: window.size,
+                  position: { x: 0, y: 0 },
+                  size: {
+                    width: globalThis.window.innerWidth,
+                    height: globalThis.window.innerHeight - 48, // Subtract taskbar height
+                  },
+                },
+              },
+            };
+          }
+        });
       },
 
       getZIndex: (id) => {

@@ -26,6 +26,15 @@
   pointer-events: none;
 }
 
+.window.maximized {
+  transition: all var(--transition-fast);
+}
+
+.window.resizing {
+  user-select: none;
+  transition: none;
+}
+
 .window.hidden {
   display: none;
 }

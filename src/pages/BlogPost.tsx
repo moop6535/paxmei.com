@@ -4,8 +4,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Desktop from '@components/Desktop';
 import Window from '@components/Window';
+import Bio from '@components/Bio';
+import BlogList from '@components/BlogList';
+import Portfolio from '@components/Portfolio';
 import { useBlogPost } from '@hooks/useBlogPost';
 import { useWindowStore } from '@stores/windowStore';
+import { bio } from '@/data/bio';
+import { blogPosts } from '@/data/blog';
+import { projects } from '@/data/portfolio';
 import styles from './BlogPost.module.css';
 
 // Lazy load syntax highlighter to reduce initial bundle size
@@ -15,16 +21,33 @@ export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
   const { meta, content, isLoading, error } = useBlogPost(slug || '');
   const openWindow = useWindowStore((state) => state.openWindow);
+  const toggleMaximize = useWindowStore((state) => state.toggleMaximize);
 
-  // Initialize window when component mounts
+  // Initialize blog-post window maximized when component mounts
   useEffect(() => {
     openWindow('blog-post', { x: 150, y: 100 }, { width: 700, height: 600 });
-  }, [openWindow]);
+    // Maximize after a brief delay to ensure window is created
+    setTimeout(() => {
+      toggleMaximize('blog-post');
+    }, 0);
+  }, [openWindow, toggleMaximize]);
 
   if (isLoading) {
     return (
       <Desktop>
-        <Window id="blog-post" title="Loading..." draggable minimizable closeable>
+        {/* Core Windows */}
+        <Window id="bio" title="Bio" draggable resizable minimizable closeable>
+          <Bio data={bio} />
+        </Window>
+        <Window id="blog" title="Blog" draggable resizable minimizable closeable>
+          <BlogList posts={blogPosts} />
+        </Window>
+        <Window id="portfolio" title="Portfolio" draggable resizable minimizable closeable>
+          <Portfolio projects={projects} />
+        </Window>
+
+        {/* Blog Post Window */}
+        <Window id="blog-post" title="Loading..." draggable resizable minimizable closeable>
           <div className={styles.loading}>Loading post...</div>
         </Window>
       </Desktop>
@@ -34,7 +57,19 @@ export default function BlogPost() {
   if (error) {
     return (
       <Desktop>
-        <Window id="blog-post" title="Error" draggable minimizable closeable>
+        {/* Core Windows */}
+        <Window id="bio" title="Bio" draggable resizable minimizable closeable>
+          <Bio data={bio} />
+        </Window>
+        <Window id="blog" title="Blog" draggable resizable minimizable closeable>
+          <BlogList posts={blogPosts} />
+        </Window>
+        <Window id="portfolio" title="Portfolio" draggable resizable minimizable closeable>
+          <Portfolio projects={projects} />
+        </Window>
+
+        {/* Blog Post Window */}
+        <Window id="blog-post" title="Error" draggable resizable minimizable closeable>
           <div className={styles.error}>
             <h2>Post Not Found</h2>
             <p>{error}</p>
@@ -49,10 +84,23 @@ export default function BlogPost() {
 
   return (
     <Desktop>
+      {/* Core Windows */}
+      <Window id="bio" title="Bio" draggable resizable minimizable closeable>
+        <Bio data={bio} />
+      </Window>
+      <Window id="blog" title="Blog" draggable resizable minimizable closeable>
+        <BlogList posts={blogPosts} />
+      </Window>
+      <Window id="portfolio" title="Portfolio" draggable resizable minimizable closeable>
+        <Portfolio projects={projects} />
+      </Window>
+
+      {/* Blog Post Window */}
       <Window
         id="blog-post"
         title={meta.title}
         draggable
+        resizable
         minimizable
         closeable
       >

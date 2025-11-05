@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { useWindowStore } from '@stores/windowStore';
 import { useDraggable } from '@hooks/useDraggable';
+import { useResizable } from '@hooks/useResizable';
 import WindowChrome from './WindowChrome';
 import WindowContent from './WindowContent';
+import ResizeHandles from './ResizeHandles';
 import styles from './Window.module.css';
 
 interface WindowProps {
@@ -29,12 +31,14 @@ export default function Window({
   const window = useWindowStore((state) => state.windows[id]);
   const bringToFront = useWindowStore((state) => state.bringToFront);
   const toggleMinimize = useWindowStore((state) => state.toggleMinimize);
+  const toggleMaximize = useWindowStore((state) => state.toggleMaximize);
   const closeWindow = useWindowStore((state) => state.closeWindow);
   const updatePosition = useWindowStore((state) => state.updatePosition);
+  const updateSize = useWindowStore((state) => state.updateSize);
   const getZIndex = useWindowStore((state) => state.getZIndex);
   const windowStack = useWindowStore((state) => state.windowStack);
 
-  // Draggable hook
+  // Draggable hook (disabled when maximized)
   const { position, isDragging, handleMouseDown } = useDraggable({
     initialPosition: window?.position || { x: 0, y: 0 },
     onDragEnd: (pos) => {
@@ -42,6 +46,20 @@ export default function Window({
     },
     constrainToViewport: true,
     windowSize: window?.size || { width: 300, height: 200 },
+  });
+
+  // Resizable hook (disabled when maximized)
+  const { size, isResizing, handleResizeStart } = useResizable({
+    initialSize: window?.size || { width: 300, height: 200 },
+    minSize: { width: 300, height: 200 },
+    maxSize: { width: globalThis.window.innerWidth, height: globalThis.window.innerHeight - 48 },
+    onResize: (newSize) => {
+      // Update in real-time while resizing
+      updateSize(id, newSize);
+    },
+    onResizeEnd: (newSize) => {
+      updateSize(id, newSize);
+    },
   });
 
   if (!window || !window.isVisible) {
@@ -61,6 +79,10 @@ export default function Window({
     toggleMinimize(id);
   };
 
+  const handleMaximize = () => {
+    toggleMaximize(id);
+  };
+
   const handleClose = () => {
     closeWindow(id);
   };
@@ -71,8 +93,8 @@ export default function Window({
       bringToFront(id);
     }
 
-    // Start dragging if enabled
-    if (draggable) {
+    // Start dragging if enabled and not maximized
+    if (draggable && !window.isMaximized) {
       handleMouseDown(e);
     }
   };
@@ -80,30 +102,36 @@ export default function Window({
   // Use dragged position if dragging, otherwise use store position
   const displayPosition = draggable && isDragging ? position : window.position;
 
+  // Use resized size if resizing, otherwise use store size
+  const displaySize = resizable && isResizing ? size : window.size;
+
   return (
     <div
       className={`${styles.window} ${isFocused ? styles.focused : ''} ${
         window.isMinimized ? styles.minimized : ''
-      } ${isDragging ? styles.dragging : ''} ${className}`}
+      } ${window.isMaximized ? styles.maximized : ''} ${isDragging ? styles.dragging : ''} ${
+        isResizing ? styles.resizing : ''
+      } ${className}`}
       style={{
         left: `${displayPosition.x}px`,
         top: `${displayPosition.y}px`,
-        width: `${window.size.width}px`,
-        height: `${window.size.height}px`,
+        width: `${displaySize.width}px`,
+        height: `${displaySize.height}px`,
         zIndex,
-        willChange: isDragging ? 'transform' : 'auto',
+        willChange: isDragging || isResizing ? 'transform' : 'auto',
       }}
       onClick={handleClick}
     >
       <WindowChrome
         title={title}
         onMinimize={minimizable ? handleMinimize : undefined}
-        onMaximize={resizable ? undefined : undefined}
+        onMaximize={resizable ? handleMaximize : undefined}
         onClose={closeable ? handleClose : undefined}
-        draggable={draggable}
+        draggable={draggable && !window.isMaximized}
         onMouseDown={handleChromeMouseDown}
       />
       <WindowContent>{children}</WindowContent>
+      {resizable && !window.isMaximized && <ResizeHandles onResizeStart={handleResizeStart} />}
     </div>
   );
 }

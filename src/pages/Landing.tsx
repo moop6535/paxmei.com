@@ -11,17 +11,17 @@ export default function Landing() {
   return (
     <Desktop>
       {/* Bio Window */}
-      <Window id="bio" title="Bio" draggable minimizable closeable>
+      <Window id="bio" title="Bio" draggable resizable minimizable closeable>
         <Bio data={bio} />
       </Window>
 
       {/* Blog Window */}
-      <Window id="blog" title="Blog" draggable minimizable closeable>
+      <Window id="blog" title="Blog" draggable resizable minimizable closeable>
         <BlogList posts={blogPosts} />
       </Window>
 
       {/* Portfolio Window */}
-      <Window id="portfolio" title="Portfolio" draggable minimizable closeable>
+      <Window id="portfolio" title="Portfolio" draggable resizable minimizable closeable>
         <Portfolio projects={projects} />
       </Window>
     </Desktop>
