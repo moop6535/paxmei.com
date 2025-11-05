@@ -4,8 +4,6 @@ date: 2025-11-05
 excerpt: Introducing my new personal site with a unique OS-brutalist design...
 ---
 
-# Welcome to paxmei.com
-
 I'm excited to introduce my new personal site, built with a unique **OS-brutalist** design philosophy that combines the raw, functional aesthetic of operating systems with modern web technologies.
 
 ## The Design Philosophy

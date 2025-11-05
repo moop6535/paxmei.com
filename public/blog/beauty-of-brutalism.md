@@ -4,8 +4,6 @@ date: 2025-10-15
 excerpt: Why brutalist design is making a comeback in modern web development...
 ---
 
-# The Beauty of Brutalism
-
 Brutalist web design is experiencing a renaissance. In an era of homogeneous, over-polished interfaces, brutalism offers a refreshing alternative that prioritizes function and honesty.
 
 ## What is Brutalist Design?

@@ -4,8 +4,6 @@ date: 2025-10-28
 excerpt: Exploring the latest features in React 19 and what they mean for performance...
 ---
 
-# Building with React 19
-
 React 19 brings significant improvements to both the developer experience and runtime performance. Let's explore the key features and how they impact our applications.
 
 ## New Compiler Optimizations

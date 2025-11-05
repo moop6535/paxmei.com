@@ -31,7 +31,7 @@
 
 .projectDescription {
   margin: 0;
-  font-size: var(--font-size-base);
+  font-size: 1.0625rem; /* 17px - larger for readability */
   color: var(--color-text-secondary);
   line-height: 1.6;
 }
@@ -60,7 +60,7 @@
 .link {
   color: var(--color-text-primary);
   text-decoration: none;
-  font-size: var(--font-size-base);
+  font-size: 1rem; /* 16px */
   transition: color var(--transition-fast);
 }
 

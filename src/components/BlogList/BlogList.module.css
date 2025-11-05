@@ -52,7 +52,7 @@
 
 .postExcerpt {
   margin: 0;
-  font-size: var(--font-size-base);
+  font-size: 1.0625rem; /* 17px - larger for readability */
   color: var(--color-text-secondary);
   line-height: 1.6;
 }

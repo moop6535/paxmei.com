@@ -21,14 +21,14 @@
 .tagline {
   margin: 0;
   color: var(--color-accent);
-  font-size: var(--font-size-base);
+  font-size: 1.0625rem; /* 17px - larger for readability */
   line-height: 1.5;
 }
 
 .description {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: var(--font-size-base);
+  font-size: 1.0625rem; /* 17px - larger for readability */
   line-height: 1.75;
 }
 
@@ -56,7 +56,7 @@
 .socialLink {
   color: var(--color-text-primary);
   text-decoration: none;
-  font-size: var(--font-size-base);
+  font-size: 1rem; /* 16px */
   transition: color var(--transition-fast);
 }
 
