@@ -65,7 +65,7 @@ export default function Window({
     closeWindow(id);
   };
 
-  const handleChromeMouseDown = (e: React.MouseEvent) => {
+  const handleChromeMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     // Bring to front when starting to drag
     if (!isFocused) {
       bringToFront(id);

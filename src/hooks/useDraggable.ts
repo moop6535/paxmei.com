@@ -16,7 +16,7 @@ interface UseDraggableOptions {
 interface UseDraggableReturn {
   position: Position;
   isDragging: boolean;
-  handleMouseDown: (e: React.MouseEvent) => void;
+  handleMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
 }
 
 export const useDraggable = ({
@@ -54,12 +54,17 @@ export const useDraggable = ({
     [constrainToViewport, windowSize]
   );
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     // Prevent text selection while dragging
     e.preventDefault();
 
     setIsDragging(true);
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
+
+    // Handle both mouse and touch events
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    dragStartPos.current = { x: clientX, y: clientY };
     elementStartPos.current = position;
 
     // Add grabbing cursor to body
@@ -67,11 +72,15 @@ export const useDraggable = ({
   }, [position]);
 
   const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
+    (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return;
 
-      const deltaX = e.clientX - dragStartPos.current.x;
-      const deltaY = e.clientY - dragStartPos.current.y;
+      // Handle both mouse and touch events
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+      const deltaX = clientX - dragStartPos.current.x;
+      const deltaY = clientY - dragStartPos.current.y;
 
       const newPosition = constrainPosition({
         x: elementStartPos.current.x + deltaX,
@@ -95,12 +104,19 @@ export const useDraggable = ({
   // Add/remove event listeners
   useEffect(() => {
     if (isDragging) {
+      // Mouse events
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+
+      // Touch events
+      window.addEventListener('touchmove', handleMouseMove);
+      window.addEventListener('touchend', handleMouseUp);
 
       return () => {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('touchmove', handleMouseMove);
+        window.removeEventListener('touchend', handleMouseUp);
       };
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);

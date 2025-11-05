@@ -6,7 +6,7 @@ interface WindowChromeProps {
   onMaximize?: () => void;
   onClose?: () => void;
   draggable?: boolean;
-  onMouseDown?: (e: React.MouseEvent) => void;
+  onMouseDown?: (e: React.MouseEvent | React.TouchEvent) => void;
 }
 
 export default function WindowChrome({
@@ -26,6 +26,7 @@ export default function WindowChrome({
     <div
       className={`${styles.chrome} ${draggable ? styles.draggable : ''}`}
       onMouseDown={onMouseDown}
+      onTouchStart={onMouseDown}
     >
       <div className={styles.title}>{title}</div>
       <div className={styles.controls}>

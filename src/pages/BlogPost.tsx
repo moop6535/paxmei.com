@@ -1,14 +1,15 @@
 import { useParams, Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import Desktop from '@components/Desktop';
 import Window from '@components/Window';
 import { useBlogPost } from '@hooks/useBlogPost';
 import { useWindowStore } from '@stores/windowStore';
 import styles from './BlogPost.module.css';
+
+// Lazy load syntax highlighter to reduce initial bundle size
+const CodeBlock = lazy(() => import('@components/CodeBlock/CodeBlock'));
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
@@ -68,20 +69,12 @@ export default function BlogPost() {
               remarkPlugins={[remarkGfm]}
               components={{
                 code({ inline, className, children, ...props }: any) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      style={vscDarkPlus}
-                      language={match[1]}
-                      PreTag="div"
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
+                  return (
+                    <Suspense fallback={<code className={className}>{children}</code>}>
+                      <CodeBlock inline={inline} className={className} {...props}>
+                        {String(children)}
+                      </CodeBlock>
+                    </Suspense>
                   );
                 },
               }}
