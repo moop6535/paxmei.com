@@ -18,6 +18,16 @@ export default defineConfig({
       '@data': path.resolve(__dirname, './src/data'),
     },
   },
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

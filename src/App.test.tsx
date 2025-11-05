@@ -31,6 +31,7 @@ describe('App Routing', () => {
 
     global.requestAnimationFrame = vi.fn(() => 1) as any;
     global.cancelAnimationFrame = vi.fn();
+    global.fetch = vi.fn();
   });
 
   it('renders Landing page on root route', () => {
@@ -48,6 +49,9 @@ describe('App Routing', () => {
   });
 
   it('renders BlogPost page on /blog/:slug route', () => {
+    // Mock fetch to return blog post loading state
+    (global.fetch as any).mockImplementation(() => new Promise(() => {}));
+
     render(
       <MemoryRouter initialEntries={['/blog/test-post']}>
         <Routes>
@@ -57,8 +61,9 @@ describe('App Routing', () => {
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByText(/Blog Post/i)).toBeInTheDocument();
-    expect(screen.getByText(/Slug: test-post/i)).toBeInTheDocument();
+
+    // Should show loading state
+    expect(screen.getByText('Loading post...')).toBeInTheDocument();
   });
 
   it('renders NotFound page on invalid route', () => {
