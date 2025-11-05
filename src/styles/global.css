@@ -168,6 +168,60 @@ button:focus-visible {
   cursor: move;
 }
 
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  a:hover {
+    color: var(--color-accent); /* Keep default, no hover change */
+  }
+
+  button:hover {
+    /* Keep default, no hover change */
+  }
+
+  /* Prevent callout menu on iOS */
+  * {
+    -webkit-touch-callout: none;
+  }
+
+  /* Prevent tap highlight on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 767px) {
+  /* Ensure buttons have minimum touch target */
+  button,
+  a {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  /* Better touch scrolling on iOS */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Improve touch interactions */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation; /* Eliminates 300ms tap delay */
+}
+
 /* Accessibility */
 .sr-only {
   position: absolute;

@@ -79,4 +79,48 @@
   /* Shadows */
   --shadow-window: 0 20px 60px rgba(0, 0, 0, 0.8);
   --shadow-window-focused: 0 25px 80px rgba(0, 0, 0, 0.9);
+
+  /* Touch Targets */
+  --touch-target-min: 44px; /* WCAG AAA minimum */
+
+  /* Mobile Navigation */
+  --mobile-nav-height: 56px;
+}
+
+/* Mobile Breakpoint (< 768px) */
+@media (max-width: 767px) {
+  :root {
+    /* Typography - Larger for mobile readability */
+    --font-size-hero: 2.5rem; /* 40px */
+    --font-size-h1: 2rem; /* 32px */
+    --font-size-h2: 1.5rem; /* 24px */
+    --font-size-h3: 1.25rem; /* 20px */
+    --font-size-h4: 1.125rem; /* 18px */
+    --font-size-base: 1rem; /* 16px - minimum for mobile */
+    --font-size-small: 0.875rem; /* 14px */
+
+    /* Spacing - More compact for mobile */
+    --spacing-sm: 0.75rem; /* 12px */
+    --spacing-md: 1rem; /* 16px */
+    --spacing-lg: 1.5rem; /* 24px */
+    --spacing-xl: 2rem; /* 32px */
+
+    /* Line Heights - Increased for mobile readability */
+    --line-height-normal: 1.7;
+    --line-height-relaxed: 1.9;
+  }
+}
+
+/* Tablet Breakpoint (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    /* Typography - Slightly adjusted for tablet */
+    --font-size-hero: 3rem; /* 48px */
+    --font-size-h1: 2.25rem; /* 36px */
+    --font-size-h2: 1.75rem; /* 28px */
+    --font-size-base: 0.9375rem; /* 15px */
+
+    /* Touch targets remain large */
+    --touch-target-min: 44px;
+  }
 }
