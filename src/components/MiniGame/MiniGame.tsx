@@ -61,7 +61,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
   // Game should be active whenever conditions are met
   // Pause state will be managed separately based on window visibility
-  const { gameState, handleClick, handleRestart, setPaused, updateObjects } = useGameLoop(
+  const { gameState, handleClick, handleRestart, setPaused, updateObjects, setLaser } = useGameLoop(
     config,
     shouldRenderGame
   );
@@ -140,71 +140,70 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
   const handleMouseUp = () => {
     setIsMouseDown(false);
     setCannon((prev) => ({ ...prev, isFiring: false }));
+    setLaser(null);
   };
 
-  // Apply laser damage when firing
+  // Update laser state when firing
   useEffect(() => {
-    if (!shouldRenderGame || gameState.isPaused || gameState.gameOver || !cannon.isFiring) return;
+    if (!shouldRenderGame || gameState.isPaused || gameState.gameOver) {
+      setLaser(null);
+      return;
+    }
 
-    const applyDamage = () => {
-      // Calculate laser beam endpoint (extend far past mouse)
+    if (cannon.isFiring) {
       const laserLength = 2000;
       const laserEndX = cannon.x + Math.cos(cannon.angle) * laserLength;
       const laserEndY = cannon.y + Math.sin(cannon.angle) * laserLength;
 
-      // Apply damage to objects
-      const result = gameLogic.applyLaserDamage(
-        gameState.objects,
-        cannon.x,
-        cannon.y,
-        laserEndX,
-        laserEndY,
-        0.08 // Damage per frame
-      );
+      setLaser({
+        isFiring: true,
+        startX: cannon.x,
+        startY: cannon.y,
+        endX: laserEndX,
+        endY: laserEndY,
+      });
+    } else {
+      setLaser(null);
+    }
+  }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, cannon.isFiring, cannon.angle, cannon.x, cannon.y, setLaser]);
 
-      if (result.destroyedCount > 0) {
-        // Update score and objects
-        updateObjects(result.objects, result.destroyedCount);
+  // Track score changes for particle effects
+  const prevScoreRef = useRef(gameState.score);
+  useEffect(() => {
+    if (gameState.score > prevScoreRef.current) {
+      const destroyedCount = gameState.score - prevScoreRef.current;
+      const now = Date.now();
+      const timeSinceLastKill = now - lastCatchTime;
+      const isCombo = timeSinceLastKill < 800;
+      const newComboCount = isCombo ? comboCount + 1 : 0;
+      setComboCount(newComboCount);
+      setLastCatchTime(now);
 
-        // Track combo
-        const now = Date.now();
-        const timeSinceLastKill = now - lastCatchTime;
-        const isCombo = timeSinceLastKill < 800;
-        const newComboCount = isCombo ? comboCount + 1 : 0;
-        setComboCount(newComboCount);
-        setLastCatchTime(now);
+      // Create particles for each destroyed object
+      for (let i = 0; i < destroyedCount; i++) {
+        const particleCount = 12 + newComboCount * 2;
+        const newParticles: Particle[] = [];
 
-        // Create particles and score popups for each destroyed object
-        for (let i = 0; i < result.destroyedCount; i++) {
-          const particleCount = 12 + newComboCount * 2;
-          const newParticles: Particle[] = [];
-
-          for (let j = 0; j < particleCount; j++) {
-            const angle = (Math.PI * 2 * j) / particleCount;
-            const speed = 3 + Math.random() * 4;
-            newParticles.push({
-              id: `particle-${now}-${i}-${j}`,
-              x: mousePos.x,
-              y: mousePos.y,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              life: 1,
-              maxLife: 1,
-              color: newComboCount > 0 ? GAME_COLORS.YELLOW : GAME_COLORS.CYAN,
-              size: 4 + newComboCount,
-            });
-          }
-          setParticles((prev) => [...prev, ...newParticles]);
+        for (let j = 0; j < particleCount; j++) {
+          const angle = (Math.PI * 2 * j) / particleCount;
+          const speed = 3 + Math.random() * 4;
+          newParticles.push({
+            id: `particle-${now}-${i}-${j}`,
+            x: mousePos.x,
+            y: mousePos.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            maxLife: 1,
+            color: newComboCount > 0 ? GAME_COLORS.YELLOW : GAME_COLORS.CYAN,
+            size: 4 + newComboCount,
+          });
         }
-      } else {
-        // Update objects without score change
-        updateObjects(result.objects, 0);
+        setParticles((prev) => [...prev, ...newParticles]);
       }
-    };
-
-    const interval = setInterval(applyDamage, 1000 / 60); // 60 FPS
-    return () => clearInterval(interval);
-  }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, gameState.objects, cannon.isFiring, cannon.angle, cannon.x, cannon.y, mousePos, comboCount, lastCatchTime, updateObjects]);
+    }
+    prevScoreRef.current = gameState.score;
+  }, [gameState.score, comboCount, lastCatchTime, mousePos]);
 
   // Animate visual effects
   useEffect(() => {

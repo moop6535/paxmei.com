@@ -8,6 +8,17 @@ import type { GameState, GameConfig } from './types';
 import * as gameLogic from './gameLogic';
 
 /**
+ * Laser state for continuous firing
+ */
+export interface LaserState {
+  isFiring: boolean;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}
+
+/**
  * Return type for useGameLoop hook
  */
 interface UseGameLoopReturn {
@@ -16,6 +27,7 @@ interface UseGameLoopReturn {
   handleRestart: () => void;
   setPaused: (paused: boolean) => void;
   updateObjects: (objects: GameObject[], scoreIncrease: number) => void;
+  setLaser: (laser: LaserState | null) => void;
 }
 
 /**
@@ -44,6 +56,7 @@ export function useGameLoop(
   const [gameState, setGameState] = useState<GameState>(createInitialState());
   const animationFrameRef = useRef<number>();
   const lastFrameTimeRef = useRef<number>(Date.now());
+  const laserRef = useRef<LaserState | null>(null);
 
   // Game loop
   useEffect(() => {
@@ -59,14 +72,29 @@ export function useGameLoop(
 
       setGameState((prevState) => {
         // Update object positions
-        const updatedObjects = gameLogic.updateObjects(
+        let objects = gameLogic.updateObjects(
           prevState.objects,
           deltaTime
         );
 
+        // Apply laser damage if firing
+        let scoreIncrease = 0;
+        if (laserRef.current && laserRef.current.isFiring) {
+          const laserResult = gameLogic.applyLaserDamage(
+            objects,
+            laserRef.current.startX,
+            laserRef.current.startY,
+            laserRef.current.endX,
+            laserRef.current.endY,
+            0.08 // Damage per frame
+          );
+          objects = laserResult.objects;
+          scoreIncrease = laserResult.destroyedCount;
+        }
+
         // Check bottom collisions
         const { remainingObjects, hitCount } = gameLogic.checkBottomCollisions(
-          updatedObjects,
+          objects,
           config.canvasHeight
         );
 
@@ -74,7 +102,7 @@ export function useGameLoop(
         const gameOver = newStrikes >= config.maxStrikes;
 
         // Spawn new objects if conditions are met
-        let objects = remainingObjects;
+        objects = remainingObjects;
         const spawnInterval = gameLogic.getSpawnInterval(prevState.score);
         const shouldSpawn =
           objects.length < config.maxObjects &&
@@ -98,6 +126,7 @@ export function useGameLoop(
           strikes: newStrikes,
           gameOver,
           lastSpawnTime,
+          score: prevState.score + scoreIncrease,
         };
       });
 
@@ -167,5 +196,13 @@ export function useGameLoop(
     }));
   }, []);
 
-  return { gameState, handleClick, handleRestart, setPaused, updateObjects };
+  /**
+   * Set laser state for continuous firing
+   * @param laser - Laser state or null to stop firing
+   */
+  const setLaser = useCallback((laser: LaserState | null) => {
+    laserRef.current = laser;
+  }, []);
+
+  return { gameState, handleClick, handleRestart, setPaused, updateObjects, setLaser };
 }
