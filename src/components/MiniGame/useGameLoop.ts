@@ -14,6 +14,7 @@ interface UseGameLoopReturn {
   gameState: GameState;
   handleClick: (x: number, y: number) => void;
   handleRestart: () => void;
+  setPaused: (paused: boolean) => void;
 }
 
 /**
@@ -141,5 +142,16 @@ export function useGameLoop(
     setGameState(createInitialState());
   }, []);
 
-  return { gameState, handleClick, handleRestart };
+  /**
+   * Set pause state
+   * @param paused - Whether game should be paused
+   */
+  const setPaused = useCallback((paused: boolean) => {
+    setGameState((prevState) => ({
+      ...prevState,
+      isPaused: paused,
+    }));
+  }, []);
+
+  return { gameState, handleClick, handleRestart, setPaused };
 }

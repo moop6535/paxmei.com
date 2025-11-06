@@ -35,14 +35,15 @@ describe('gameLogic', () => {
       expect(getSpawnInterval(0)).toBe(1500);
     });
 
-    it('decreases interval as score increases', () => {
-      expect(getSpawnInterval(10)).toBe(1400);
-      expect(getSpawnInterval(50)).toBe(1000);
+    it('decreases interval as score increases (faster ramp-up)', () => {
+      expect(getSpawnInterval(10)).toBe(1250); // 1500 - 10*25
+      expect(getSpawnInterval(30)).toBe(750);  // 1500 - 30*25
     });
 
-    it('caps at minimum interval', () => {
-      expect(getSpawnInterval(100)).toBe(800);
-      expect(getSpawnInterval(200)).toBe(800);
+    it('caps at minimum interval (600ms)', () => {
+      expect(getSpawnInterval(50)).toBe(600);  // 1500 - 50*25 = 250, capped
+      expect(getSpawnInterval(100)).toBe(600);
+      expect(getSpawnInterval(200)).toBe(600);
     });
 
     it('handles negative scores gracefully', () => {
@@ -55,15 +56,15 @@ describe('gameLogic', () => {
       expect(getObjectSpeed(0)).toBe(2);
     });
 
-    it('increases speed linearly with score', () => {
-      expect(getObjectSpeed(10)).toBe(2.5);
-      expect(getObjectSpeed(20)).toBe(3);
-      expect(getObjectSpeed(50)).toBe(4.5);
+    it('increases speed linearly with score (faster ramp-up)', () => {
+      expect(getObjectSpeed(10)).toBe(3.2);  // 2 + 10*0.12
+      expect(getObjectSpeed(20)).toBe(4.4);  // 2 + 20*0.12
+      expect(getObjectSpeed(50)).toBe(8.0);  // 2 + 50*0.12
     });
 
     it('continues increasing without cap', () => {
-      expect(getObjectSpeed(100)).toBe(7);
-      expect(getObjectSpeed(200)).toBe(12);
+      expect(getObjectSpeed(100)).toBe(14);  // 2 + 100*0.12
+      expect(getObjectSpeed(200)).toBe(26);  // 2 + 200*0.12
     });
   });
 
@@ -103,7 +104,7 @@ describe('gameLogic', () => {
       const obj2 = generateRandomShape(mockConfig, Date.now(), 20);
 
       expect(obj1.speed).toBe(2);
-      expect(obj2.speed).toBe(3);
+      expect(obj2.speed).toBe(4.4); // 2 + 20*0.12
     });
 
     it('creates unique IDs', () => {

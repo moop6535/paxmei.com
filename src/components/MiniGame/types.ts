@@ -12,6 +12,9 @@ export const GAME_COLORS = {
   WHITE: '#ffffff',
   BLACK: '#000000',
   RED: '#ff0000',
+  YELLOW: '#ffff00',
+  CYAN: '#00ffff',
+  GREEN: '#00ff00',
   OBJECT_COLORS: ['#ffffff', '#cccccc', '#999999'], // White to gray spectrum
 } as const;
 
@@ -72,4 +75,31 @@ export interface CollisionResult {
 export interface BottomCollisionResult {
   remainingObjects: GameObject[];
   hitCount: number;
+}
+
+/**
+ * Score popup effect
+ */
+export interface ScorePopup {
+  id: string;
+  x: number;
+  y: number;
+  value: number;
+  timestamp: number;
+  isCombo?: boolean;
+}
+
+/**
+ * Particle effect
+ */
+export interface Particle {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
 }

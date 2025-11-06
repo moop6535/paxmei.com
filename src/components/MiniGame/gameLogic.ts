@@ -14,24 +14,24 @@ import { GAME_COLORS } from './types';
 
 /**
  * Calculate spawn interval based on score (difficulty progression)
- * Starts at 1500ms, decreases to minimum 800ms
+ * Starts at 1500ms, decreases to minimum 600ms (faster ramp-up)
  * @param score - Current game score
  * @returns Spawn interval in milliseconds
  */
 export function getSpawnInterval(score: number): number {
   const safeScore = Math.max(0, score); // Clamp to 0 or positive
-  return Math.max(800, 1500 - safeScore * 10);
+  return Math.max(600, 1500 - safeScore * 25);
 }
 
 /**
  * Calculate object speed based on score (difficulty progression)
- * Speed increases linearly with score
+ * Speed increases linearly with score (faster ramp-up)
  * @param score - Current game score
  * @returns Speed in pixels per frame
  */
 export function getObjectSpeed(score: number): number {
   const safeScore = Math.max(0, score); // Clamp to 0 or positive
-  return 2 + safeScore * 0.05;
+  return 2 + safeScore * 0.12;
 }
 
 /**

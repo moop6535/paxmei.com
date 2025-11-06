@@ -8,7 +8,7 @@ import { useWindowStore } from '@stores/windowStore';
 import { useMediaQuery } from '@hooks/useMediaQuery';
 import { prefersReducedMotion } from '@/utils/responsive';
 import { useGameLoop } from './useGameLoop';
-import type { GameObject, GameConfig } from './types';
+import type { GameObject, GameConfig, ScorePopup, Particle } from './types';
 import { GAME_COLORS } from './types';
 import styles from './MiniGame.module.css';
 
@@ -50,7 +50,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       maxObjects: 40,
       maxStrikes: 3,
       baseSpawnInterval: 1500,
-      minSpawnInterval: 800,
+      minSpawnInterval: 600,
       baseSpeed: 2,
       objectMinSize: 40,
       objectMaxSize: 60,
@@ -58,10 +58,21 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     []
   );
 
-  const { gameState, handleClick, handleRestart } = useGameLoop(
+  // Game should be active whenever conditions are met
+  // Pause state will be managed separately based on window visibility
+  const { gameState, handleClick, handleRestart, setPaused } = useGameLoop(
     config,
     shouldRenderGame
   );
+
+  // Update pause state based on idle status
+  useEffect(() => {
+    if (!shouldRenderGame) return;
+
+    // Pause when any window is visible (not idle)
+    // Resume when all windows are minimized (idle)
+    setPaused(!isDesktopIdle);
+  }, [shouldRenderGame, isDesktopIdle, setPaused]);
 
   // Click feedback state (shows brief flash on click)
   const [clickFeedback, setClickFeedback] = useState<{
@@ -69,6 +80,13 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     y: number;
     timestamp: number;
   } | null>(null);
+
+  // Visual effects state
+  const [scorePopups, setScorePopups] = useState<ScorePopup[]>([]);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [lastCatchTime, setLastCatchTime] = useState<number>(0);
+  const [comboCount, setComboCount] = useState<number>(0);
+  const [strikeFlash, setStrikeFlash] = useState<number>(0);
 
   // Canvas click handler with visual feedback
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -86,11 +104,102 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     // Handle restart if game over
     if (gameState.gameOver) {
       handleRestart();
+      setComboCount(0);
+      setScorePopups([]);
+      setParticles([]);
       return;
     }
 
+    // Check for hit before click to add visual effects
+    const prevScore = gameState.score;
     handleClick(x, y);
+
+    // Check if we got a hit by comparing score
+    setTimeout(() => {
+      if (gameState.score > prevScore) {
+        const now = Date.now();
+        const timeSinceLastCatch = now - lastCatchTime;
+        const isCombo = timeSinceLastCatch < 800; // 800ms window for combo
+
+        // Update combo
+        const newComboCount = isCombo ? comboCount + 1 : 0;
+        setComboCount(newComboCount);
+        setLastCatchTime(now);
+
+        // Create score popup
+        const scoreValue = isCombo && newComboCount > 0 ? newComboCount + 1 : 1;
+        const popup: ScorePopup = {
+          id: `popup-${now}`,
+          x,
+          y,
+          value: scoreValue,
+          timestamp: now,
+          isCombo: newComboCount > 0,
+        };
+        setScorePopups((prev) => [...prev, popup]);
+
+        // Create particle explosion
+        const newParticles: Particle[] = [];
+        const particleCount = 8 + newComboCount * 2;
+        for (let i = 0; i < particleCount; i++) {
+          const angle = (Math.PI * 2 * i) / particleCount;
+          const speed = 2 + Math.random() * 3;
+          newParticles.push({
+            id: `particle-${now}-${i}`,
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            maxLife: 1,
+            color: newComboCount > 0 ? GAME_COLORS.YELLOW : GAME_COLORS.WHITE,
+            size: 3 + newComboCount,
+          });
+        }
+        setParticles((prev) => [...prev, ...newParticles]);
+      }
+    }, 16);
   };
+
+  // Animate visual effects
+  useEffect(() => {
+    if (!shouldRenderGame || gameState.isPaused) return;
+
+    const animateEffects = () => {
+      const now = Date.now();
+
+      // Update particles
+      setParticles((prev) =>
+        prev
+          .map((p) => {
+            const age = (now - (p.id.match(/\d+/)?.[0] ? parseInt(p.id.match(/\d+/)![0]) : now)) / 600;
+            const life = Math.max(0, 1 - age);
+            return {
+              ...p,
+              x: p.x + p.vx,
+              y: p.y + p.vy,
+              life,
+            };
+          })
+          .filter((p) => p.life > 0)
+      );
+
+      // Remove old score popups (after 1 second)
+      setScorePopups((prev) => prev.filter((popup) => now - popup.timestamp < 1000));
+    };
+
+    const interval = setInterval(animateEffects, 1000 / 60);
+    return () => clearInterval(interval);
+  }, [shouldRenderGame, gameState.isPaused]);
+
+  // Detect strikes and flash screen
+  const prevStrikesRef = useRef(gameState.strikes);
+  useEffect(() => {
+    if (gameState.strikes > prevStrikesRef.current) {
+      setStrikeFlash(Date.now());
+    }
+    prevStrikesRef.current = gameState.strikes;
+  }, [gameState.strikes]);
 
   // ESC key handler (works during gameplay AND game over)
   useEffect(() => {
@@ -139,28 +248,69 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     ctx.fillRect(0, 0, rect.width, rect.height);
     ctx.globalAlpha = 1.0;
 
-    // Draw objects
+    // Draw strike flash (red overlay)
+    const flashAge = Date.now() - strikeFlash;
+    if (flashAge < 200) {
+      ctx.fillStyle = GAME_COLORS.RED;
+      ctx.globalAlpha = 0.3 * (1 - flashAge / 200);
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.globalAlpha = 1.0;
+    }
+
+    // Draw particles
+    particles.forEach((particle) => {
+      ctx.fillStyle = particle.color;
+      ctx.globalAlpha = particle.life;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+    });
+
+    // Draw objects with glow
     gameState.objects.forEach((obj) => {
-      drawObject(ctx, obj);
+      drawObjectWithGlow(ctx, obj);
     });
 
     // Draw click feedback if active
     if (clickFeedback) {
-      ctx.strokeStyle = GAME_COLORS.WHITE;
+      ctx.strokeStyle = GAME_COLORS.CYAN;
       ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.8;
       ctx.beginPath();
       ctx.arc(clickFeedback.x, clickFeedback.y, 20, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.globalAlpha = 1.0;
     }
 
-    // Draw UI (score, strikes)
-    drawUI(ctx, gameState);
+    // Draw score popups
+    scorePopups.forEach((popup) => {
+      const age = (Date.now() - popup.timestamp) / 1000;
+      const yOffset = -age * 50; // Float upward
+      const alpha = Math.max(0, 1 - age);
+
+      ctx.fillStyle = popup.isCombo ? GAME_COLORS.YELLOW : GAME_COLORS.GREEN;
+      ctx.globalAlpha = alpha;
+      ctx.font = popup.isCombo ? 'bold 32px monospace' : 'bold 24px monospace';
+      ctx.textAlign = 'center';
+      const text = popup.isCombo ? `+${popup.value} COMBO!` : `+${popup.value}`;
+      ctx.fillText(text, popup.x, popup.y + yOffset);
+      ctx.globalAlpha = 1.0;
+    });
+
+    // Draw UI (score, strikes, combo)
+    drawUI(ctx, gameState, comboCount);
+
+    // Draw pause overlay
+    if (gameState.isPaused) {
+      drawPauseOverlay(ctx, rect.width, rect.height);
+    }
 
     // Draw game over screen if needed
     if (gameState.gameOver) {
       drawGameOver(ctx, gameState.score, rect.width, rect.height);
     }
-  }, [shouldRenderGame, gameState, clickFeedback]);
+  }, [shouldRenderGame, gameState, clickFeedback, scorePopups, particles, strikeFlash, comboCount]);
 
   // Window resize handler
   useEffect(() => {
@@ -197,9 +347,12 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 }
 
 /**
- * Draw a game object on canvas
+ * Draw a game object with glow effect
  */
-function drawObject(ctx: CanvasRenderingContext2D, obj: GameObject) {
+function drawObjectWithGlow(ctx: CanvasRenderingContext2D, obj: GameObject) {
+  // Draw glow (outer shadow)
+  ctx.shadowColor = obj.color;
+  ctx.shadowBlur = 15;
   ctx.strokeStyle = obj.color;
   ctx.lineWidth = 5;
 
@@ -227,18 +380,61 @@ function drawObject(ctx: CanvasRenderingContext2D, obj: GameObject) {
       ctx.stroke();
       break;
   }
+
+  // Reset shadow
+  ctx.shadowBlur = 0;
 }
 
 /**
- * Draw UI (score and strikes)
+ * Draw UI (score, strikes, and combo)
  */
-function drawUI(ctx: CanvasRenderingContext2D, state: GameState) {
+function drawUI(ctx: CanvasRenderingContext2D, state: GameState, combo: number) {
+  ctx.textAlign = 'left';
   ctx.fillStyle = GAME_COLORS.WHITE;
-  ctx.font = '24px monospace';
+  ctx.font = 'bold 28px monospace';
   ctx.fillText(`SCORE: ${state.score}`, 20, 40);
 
   ctx.fillStyle = state.strikes > 0 ? GAME_COLORS.RED : GAME_COLORS.WHITE;
+  ctx.font = '24px monospace';
   ctx.fillText(`STRIKES: ${state.strikes}/3`, 20, 75);
+
+  // Show combo if active
+  if (combo > 0) {
+    ctx.fillStyle = GAME_COLORS.YELLOW;
+    ctx.font = 'bold 32px monospace';
+    ctx.shadowColor = GAME_COLORS.YELLOW;
+    ctx.shadowBlur = 10;
+    ctx.fillText(`${combo + 1}x COMBO!`, 20, 115);
+    ctx.shadowBlur = 0;
+  }
+}
+
+/**
+ * Draw pause overlay
+ */
+function drawPauseOverlay(
+  ctx: CanvasRenderingContext2D,
+  canvasWidth: number,
+  canvasHeight: number
+) {
+  // Semi-transparent overlay
+  ctx.fillStyle = GAME_COLORS.BLACK;
+  ctx.globalAlpha = 0.6;
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  ctx.globalAlpha = 1.0;
+
+  // Pause text
+  ctx.fillStyle = GAME_COLORS.CYAN;
+  ctx.font = 'bold 64px monospace';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = GAME_COLORS.CYAN;
+  ctx.shadowBlur = 20;
+  ctx.fillText('PAUSED', canvasWidth / 2, canvasHeight / 2 - 20);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = GAME_COLORS.WHITE;
+  ctx.font = '24px monospace';
+  ctx.fillText('Minimize all windows to resume', canvasWidth / 2, canvasHeight / 2 + 40);
 }
 
 /**
@@ -256,16 +452,25 @@ function drawGameOver(
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
   ctx.globalAlpha = 1.0;
 
-  ctx.fillStyle = GAME_COLORS.WHITE;
-  ctx.font = '48px monospace';
+  // Game over text with glow
+  ctx.fillStyle = GAME_COLORS.RED;
+  ctx.font = 'bold 64px monospace';
   ctx.textAlign = 'center';
+  ctx.shadowColor = GAME_COLORS.RED;
+  ctx.shadowBlur = 20;
   ctx.fillText('GAME OVER', canvasWidth / 2, canvasHeight / 2 - 50);
+  ctx.shadowBlur = 0;
 
-  ctx.font = '32px monospace';
-  ctx.fillText(`SCORE: ${score}`, canvasWidth / 2, canvasHeight / 2 + 10);
+  ctx.fillStyle = GAME_COLORS.YELLOW;
+  ctx.font = 'bold 40px monospace';
+  ctx.fillText(`SCORE: ${score}`, canvasWidth / 2, canvasHeight / 2 + 20);
 
+  ctx.fillStyle = GAME_COLORS.WHITE;
+  ctx.font = '24px monospace';
+  ctx.fillText('Click to restart', canvasWidth / 2, canvasHeight / 2 + 70);
   ctx.font = '20px monospace';
-  ctx.fillText('Click to restart', canvasWidth / 2, canvasHeight / 2 + 60);
+  ctx.fillStyle = GAME_COLORS.CYAN;
+  ctx.fillText('Press ESC to exit', canvasWidth / 2, canvasHeight / 2 + 105);
 }
 
 // Import GameState type
