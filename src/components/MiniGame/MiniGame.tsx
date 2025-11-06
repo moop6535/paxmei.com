@@ -61,7 +61,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
   // Game should be active whenever conditions are met
   // Pause state will be managed separately based on window visibility
-  const { gameState, handleClick, handleRestart, setPaused, updateObjects, setLaser } = useGameLoop(
+  const { gameState, handleClick, handleRestart, setPaused, updateObjects, setLaser, hitObjects } = useGameLoop(
     config,
     shouldRenderGame
   );
@@ -167,43 +167,66 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     }
   }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, cannon.isFiring, cannon.angle, cannon.x, cannon.y, setLaser]);
 
-  // Track score changes for particle effects
-  const prevScoreRef = useRef(gameState.score);
+  // Create sparks and explosions from hit objects
   useEffect(() => {
-    if (gameState.score > prevScoreRef.current) {
-      const destroyedCount = gameState.score - prevScoreRef.current;
-      const now = Date.now();
-      const timeSinceLastKill = now - lastCatchTime;
-      const isCombo = timeSinceLastKill < 800;
-      const newComboCount = isCombo ? comboCount + 1 : 0;
-      setComboCount(newComboCount);
-      setLastCatchTime(now);
+    if (hitObjects.length === 0) return;
 
-      // Create particles for each destroyed object
-      for (let i = 0; i < destroyedCount; i++) {
-        const particleCount = 12 + newComboCount * 2;
-        const newParticles: Particle[] = [];
+    const now = Date.now();
+    const newParticles: Particle[] = [];
 
-        for (let j = 0; j < particleCount; j++) {
-          const angle = (Math.PI * 2 * j) / particleCount;
-          const speed = 3 + Math.random() * 4;
+    hitObjects.forEach((hit) => {
+      if (hit.wasDestroyed) {
+        // Big explosion for destroyed objects
+        const timeSinceLastKill = now - lastCatchTime;
+        const isCombo = timeSinceLastKill < 800;
+        const newComboCount = isCombo ? comboCount + 1 : 0;
+
+        if (timeSinceLastKill >= 800 || comboCount === 0) {
+          setComboCount(newComboCount);
+        }
+        setLastCatchTime(now);
+
+        const particleCount = 20 + newComboCount * 4;
+        for (let i = 0; i < particleCount; i++) {
+          const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.2;
+          const speed = 4 + Math.random() * 5;
           newParticles.push({
-            id: `particle-${now}-${i}-${j}`,
-            x: mousePos.x,
-            y: mousePos.y,
+            id: `explosion-${now}-${i}`,
+            x: hit.x,
+            y: hit.y,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             life: 1,
             maxLife: 1,
             color: newComboCount > 0 ? GAME_COLORS.YELLOW : GAME_COLORS.CYAN,
-            size: 4 + newComboCount,
+            size: 5 + newComboCount,
           });
         }
-        setParticles((prev) => [...prev, ...newParticles]);
+      } else {
+        // Small sparks for objects being hit
+        const sparkCount = 3;
+        for (let i = 0; i < sparkCount; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1 + Math.random() * 3;
+          newParticles.push({
+            id: `spark-${now}-${hit.x}-${hit.y}-${i}`,
+            x: hit.x + (Math.random() - 0.5) * hit.width * 0.8,
+            y: hit.y + (Math.random() - 0.5) * hit.height * 0.8,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            maxLife: 1,
+            color: GAME_COLORS.WHITE,
+            size: 2,
+          });
+        }
       }
+    });
+
+    if (newParticles.length > 0) {
+      setParticles((prev) => [...prev, ...newParticles]);
     }
-    prevScoreRef.current = gameState.score;
-  }, [gameState.score, comboCount, lastCatchTime, mousePos]);
+  }, [hitObjects, comboCount, lastCatchTime]);
 
   // Animate visual effects
   useEffect(() => {

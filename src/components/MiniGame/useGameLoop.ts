@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameState, GameConfig } from './types';
 import * as gameLogic from './gameLogic';
+import type { HitObjectInfo } from './gameLogic';
 
 /**
  * Laser state for continuous firing
@@ -28,6 +29,7 @@ interface UseGameLoopReturn {
   setPaused: (paused: boolean) => void;
   updateObjects: (objects: GameObject[], scoreIncrease: number) => void;
   setLaser: (laser: LaserState | null) => void;
+  hitObjects: HitObjectInfo[];
 }
 
 /**
@@ -57,6 +59,7 @@ export function useGameLoop(
   const animationFrameRef = useRef<number>();
   const lastFrameTimeRef = useRef<number>(Date.now());
   const laserRef = useRef<LaserState | null>(null);
+  const [hitObjects, setHitObjects] = useState<HitObjectInfo[]>([]);
 
   // Game loop
   useEffect(() => {
@@ -90,6 +93,11 @@ export function useGameLoop(
           );
           objects = laserResult.objects;
           scoreIncrease = laserResult.destroyedCount;
+
+          // Update hit objects for visual effects
+          setHitObjects(laserResult.hitObjects);
+        } else {
+          setHitObjects([]);
         }
 
         // Check bottom collisions
@@ -204,5 +212,5 @@ export function useGameLoop(
     laserRef.current = laser;
   }, []);
 
-  return { gameState, handleClick, handleRestart, setPaused, updateObjects, setLaser };
+  return { gameState, handleClick, handleRestart, setPaused, updateObjects, setLaser, hitObjects };
 }

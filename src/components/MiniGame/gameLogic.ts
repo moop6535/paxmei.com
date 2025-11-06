@@ -250,6 +250,17 @@ export function isPointInTriangle(
 }
 
 /**
+ * Hit object info for visual effects
+ */
+export interface HitObjectInfo {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  wasDestroyed: boolean;
+}
+
+/**
  * Apply laser damage to objects
  * @param objects - Array of game objects
  * @param laserStartX - Laser start X
@@ -257,7 +268,7 @@ export function isPointInTriangle(
  * @param laserEndX - Laser end X
  * @param laserEndY - Laser end Y
  * @param damagePerFrame - Damage to apply per frame (default 0.1)
- * @returns Updated objects and destroyed count
+ * @returns Updated objects, destroyed count, and hit objects info
  */
 export function applyLaserDamage(
   objects: GameObject[],
@@ -266,9 +277,10 @@ export function applyLaserDamage(
   laserEndX: number,
   laserEndY: number,
   damagePerFrame: number = 0.1
-): { objects: GameObject[]; destroyedCount: number } {
+): { objects: GameObject[]; destroyedCount: number; hitObjects: HitObjectInfo[] } {
   const updatedObjects: GameObject[] = [];
   let destroyedCount = 0;
+  const hitObjects: HitObjectInfo[] = [];
 
   objects.forEach((obj) => {
     let isHit = false;
@@ -288,7 +300,18 @@ export function applyLaserDamage(
 
     if (isHit) {
       const newHealth = obj.health - damagePerFrame;
-      if (newHealth <= 0) {
+      const wasDestroyed = newHealth <= 0;
+
+      // Track hit object for visual effects
+      hitObjects.push({
+        x: obj.x + obj.width / 2,
+        y: obj.y + obj.height / 2,
+        width: obj.width,
+        height: obj.height,
+        wasDestroyed,
+      });
+
+      if (wasDestroyed) {
         destroyedCount++;
         // Don't add to updated objects (destroyed)
       } else {
@@ -299,7 +322,7 @@ export function applyLaserDamage(
     }
   });
 
-  return { objects: updatedObjects, destroyedCount };
+  return { objects: updatedObjects, destroyedCount, hitObjects };
 }
 
 /**
