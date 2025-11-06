@@ -150,7 +150,9 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       return;
     }
 
-    if (cannon.isFiring) {
+    const isOverheated = gameState.heat >= 1.0;
+
+    if (cannon.isFiring && !isOverheated) {
       const laserLength = 2000;
       const laserEndX = cannon.x + Math.cos(cannon.angle) * laserLength;
       const laserEndY = cannon.y + Math.sin(cannon.angle) * laserLength;
@@ -165,7 +167,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     } else {
       setLaser(null);
     }
-  }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, cannon.isFiring, cannon.angle, cannon.x, cannon.y, setLaser]);
+  }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, gameState.heat, cannon.isFiring, cannon.angle, cannon.x, cannon.y, setLaser]);
 
   // Create sparks and explosions from hit objects
   useEffect(() => {
