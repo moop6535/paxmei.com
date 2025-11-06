@@ -1,0 +1,18 @@
+/**
+ * MiniGame Styles
+ * Brutalist aesthetic for the desktop mini-game
+ */
+
+.canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 90; /* Above particles (1), below windows (100+) */
+  cursor: crosshair;
+  image-rendering: pixelated; /* Brutalist crisp edges */
+}
+
+.canvas:focus {
+  outline: 4px solid var(--color-text, #ffffff);
+  outline-offset: -4px;
+}
