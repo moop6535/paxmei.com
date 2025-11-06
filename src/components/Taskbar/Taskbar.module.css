@@ -7,16 +7,93 @@
   background-color: rgba(0, 0, 0, 0.95);
   border-top: 1px solid var(--color-border);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: var(--z-index-dock);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 var(--spacing-sm);
+  gap: var(--spacing-lg);
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  text-decoration: none;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 107, 53, 0.05), transparent);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  border-radius: var(--border-radius-sm);
+}
+
+.logo:hover::before {
+  opacity: 1;
+}
+
+.logo:active::before {
+  background: linear-gradient(90deg, rgba(255, 107, 53, 0.15), rgba(255, 107, 53, 0.05));
+  opacity: 1;
+}
+
+.logoPax {
+  font-family: var(--font-family-mono);
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-black);
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+.logoSeparator {
+  font-family: var(--font-family-mono);
+  font-size: 1rem;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-border);
+  opacity: 0.5;
+  position: relative;
+  z-index: 1;
+}
+
+.logoMei {
+  font-family: var(--font-family-mono);
+  font-size: 1rem;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-primary);
+  letter-spacing: 0.15em;
+  text-transform: lowercase;
+  font-style: italic;
+  position: relative;
+  z-index: 1;
 }
 
 .tasks {
   display: flex;
   gap: var(--spacing-xs);
   align-items: center;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tasks::-webkit-scrollbar {
+  display: none;
 }
 
 .task {
@@ -42,7 +119,7 @@
 }
 
 .task.active {
-  background-color: rgba(0, 255, 255, 0.1);
+  background-color: rgba(255, 107, 53, 0.1);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
@@ -74,11 +151,31 @@
   opacity: 1;
 }
 
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+  .logo:hover::before {
+    opacity: 1;
+  }
+}
+
 /* Tablet optimizations - larger touch targets */
 @media (min-width: 768px) and (max-width: 1023px) {
   .taskbar {
     height: 56px; /* Taller for touch targets */
     padding: 0 var(--spacing-md);
+  }
+
+  .logo {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    gap: 6px;
+  }
+
+  .logoPax {
+    font-size: 1.25rem;
+  }
+
+  .logoMei {
+    font-size: 1.125rem;
   }
 
   .task {

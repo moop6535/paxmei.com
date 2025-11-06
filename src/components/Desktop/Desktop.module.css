@@ -16,6 +16,17 @@
   height: 100%;
   z-index: var(--z-index-background);
   pointer-events: none;
+
+  /* GPU acceleration optimizations */
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+
+  /* Improve rendering performance */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
 }
 
 .content {

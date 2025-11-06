@@ -11,9 +11,11 @@
   --color-text-secondary: #a0a0a0;
   --color-text-tertiary: #666666;
 
-  --color-accent: #00ffff; /* Electric blue */
-  --color-accent-hover: #66ffff;
-  --color-accent-active: #00cccc;
+  --color-accent: #ff6b35; /* Vibrant orange */
+  --color-accent-hover: #ff9966;
+  --color-accent-active: #e85d2a;
+
+  --color-heading: #f5deb3; /* Warm cream/wheat for headings */
 
   /* Typography Scale - Terminal/Computer Style */
   --font-size-hero: 3.5rem; /* 56px - Large but readable */

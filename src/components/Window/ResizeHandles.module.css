@@ -71,5 +71,5 @@
 
 /* Visual feedback on hover (optional) */
 .handle:hover {
-  background-color: rgba(0, 255, 255, 0.1);
+  background-color: rgba(255, 107, 53, 0.1);
 }

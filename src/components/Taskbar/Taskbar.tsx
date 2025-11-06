@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useWindowStore } from '@stores/windowStore';
 import styles from './Taskbar.module.css';
 
@@ -7,6 +8,9 @@ export default function Taskbar() {
   const bringToFront = useWindowStore((state) => state.bringToFront);
   const toggleMinimize = useWindowStore((state) => state.toggleMinimize);
   const openWindow = useWindowStore((state) => state.openWindow);
+
+  // Core windows that should always be in taskbar
+  const coreWindows = ['bio', 'blog', 'portfolio'];
 
   const handleTaskbarClick = (id: string) => {
     const window = windows[id];
@@ -48,21 +52,33 @@ export default function Taskbar() {
 
   return (
     <div className={styles.taskbar}>
+      <Link to="/" className={styles.logo} title="Go to home">
+        <span className={styles.logoPax}>PAX</span>
+        <span className={styles.logoSeparator}>/</span>
+        <span className={styles.logoMei}>MEI</span>
+      </Link>
+
       <div className={styles.tasks}>
-        {Object.keys(windows).map((id) => {
-          const state = getWindowState(id);
-          return (
-            <button
-              key={id}
-              className={`${styles.task} ${styles[state]}`}
-              onClick={() => handleTaskbarClick(id)}
-              title={`${getTitle(id)} - ${state}`}
-            >
-              <span className={styles.taskLabel}>{getTitle(id)}</span>
-              <span className={styles.taskIndicator} />
-            </button>
-          );
-        })}
+        {Object.keys(windows)
+          .filter((id) => {
+            // Show core windows always (even when closed)
+            // Show temporary windows only when visible
+            return coreWindows.includes(id) || windows[id].isVisible;
+          })
+          .map((id) => {
+            const state = getWindowState(id);
+            return (
+              <button
+                key={id}
+                className={`${styles.task} ${styles[state]}`}
+                onClick={() => handleTaskbarClick(id)}
+                title={`${getTitle(id)} - ${state}`}
+              >
+                <span className={styles.taskLabel}>{getTitle(id)}</span>
+                <span className={styles.taskIndicator} />
+              </button>
+            );
+          })}
       </div>
     </div>
   );

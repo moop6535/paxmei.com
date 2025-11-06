@@ -9,14 +9,70 @@
   z-index: var(--z-index-dock);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+
+  /* Safe area insets for notched devices (iPhone X+, etc.) */
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  text-decoration: none;
+  padding: var(--spacing-xs) var(--spacing-md);
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.logo:active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 107, 53, 0.1);
+  border-radius: var(--border-radius-sm);
+}
+
+.logoPax {
+  font-family: var(--font-family-mono);
+  font-size: 1rem;
+  font-weight: var(--font-weight-black);
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.logoSeparator {
+  font-family: var(--font-family-mono);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-border);
+  opacity: 0.5;
+}
+
+.logoMei {
+  font-family: var(--font-family-mono);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-primary);
+  letter-spacing: 0.15em;
+  text-transform: lowercase;
+  font-style: italic;
 }
 
 .tabs {
   display: flex;
+  flex: 1;
   height: 100%;
   align-items: center;
   justify-content: space-around;
-  padding: 0 var(--spacing-sm);
+  padding: 0 var(--spacing-xs);
 }
 
 .tab {

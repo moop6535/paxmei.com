@@ -19,11 +19,9 @@ export default function BlogList({ posts }: BlogListProps) {
           >
             <Link to={`/blog/${post.slug}`} className={styles.postLink}>
               <h4 className={styles.postTitle}>{post.title}</h4>
+              <p className={styles.postDate}>{post.date}</p>
+              <p className={styles.postExcerpt}>{post.excerpt}</p>
             </Link>
-
-            <p className={styles.postDate}>{post.date}</p>
-
-            <p className={styles.postExcerpt}>{post.excerpt}</p>
           </article>
         ))}
       </div>

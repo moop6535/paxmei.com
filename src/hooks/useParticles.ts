@@ -37,6 +37,8 @@ export const useParticles = (options: UseParticlesOptions = {}) => {
   const animationFrameRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number>(0);
   const fpsCounterRef = useRef<number[]>([]);
+  const isPausedRef = useRef<boolean>(false);
+  const resizeTimeoutRef = useRef<number | undefined>(undefined);
 
   // Initialize particles
   const initParticles = (width: number, height: number) => {
@@ -99,7 +101,11 @@ export const useParticles = (options: UseParticlesOptions = {}) => {
   // Animation loop
   const animate = (currentTime: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || isPausedRef.current) {
+      // Continue loop even when paused, but don't render
+      animationFrameRef.current = requestAnimationFrame(animate);
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -146,24 +152,42 @@ export const useParticles = (options: UseParticlesOptions = {}) => {
     animationFrameRef.current = requestAnimationFrame(animate);
   };
 
-  // Handle window resize
+  // Handle window resize with throttling
   const handleResize = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.scale(dpr, dpr);
+    // Clear existing timeout
+    if (resizeTimeoutRef.current !== undefined) {
+      clearTimeout(resizeTimeoutRef.current);
     }
 
-    // Reinitialize particles with new dimensions
-    initParticles(rect.width, rect.height);
+    // Throttle resize updates to avoid excessive recalculations
+    resizeTimeoutRef.current = window.setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.scale(dpr, dpr);
+      }
+
+      // Reinitialize particles with new dimensions
+      initParticles(rect.width, rect.height);
+    }, 150); // 150ms throttle
+  };
+
+  // Handle page visibility changes
+  const handleVisibilityChange = () => {
+    isPausedRef.current = document.hidden;
+
+    // Reset timer when becoming visible to avoid large delta jumps
+    if (!document.hidden) {
+      lastTimeRef.current = performance.now();
+    }
   };
 
   useEffect(() => {
@@ -177,15 +201,20 @@ export const useParticles = (options: UseParticlesOptions = {}) => {
     lastTimeRef.current = performance.now();
     animationFrameRef.current = requestAnimationFrame(animate);
 
-    // Add resize listener
+    // Add event listeners
     window.addEventListener('resize', handleResize);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup
     return () => {
       if (animationFrameRef.current !== undefined) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      if (resizeTimeoutRef.current !== undefined) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [particleCount, particleSize, particleSpeed, particleColor, particleOpacity]);
 

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import styles from './MobileNav.module.css';
 
 export type MobileTab = 'bio' | 'blog' | 'portfolio';
@@ -16,6 +17,12 @@ export default function MobileNav({ activeTab, onTabChange }: MobileNavProps) {
 
   return (
     <nav className={styles.nav} role="navigation" aria-label="Main navigation">
+      <Link to="/" className={styles.logo} aria-label="Go to home">
+        <span className={styles.logoPax}>PAX</span>
+        <span className={styles.logoSeparator}>/</span>
+        <span className={styles.logoMei}>mei</span>
+      </Link>
+
       <div className={styles.tabs}>
         {tabs.map((tab) => (
           <button
