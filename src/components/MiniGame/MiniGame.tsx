@@ -101,6 +101,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     isFiring: false,
   });
   const [laserIntensity, setLaserIntensity] = useState<number>(0);
+  const [isOverheatLockout, setIsOverheatLockout] = useState<boolean>(false);
 
   // Mouse move handler - update cannon angle and mouse position
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -129,6 +130,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       setComboCount(0);
       setScorePopups([]);
       setParticles([]);
+      setIsOverheatLockout(false);
       return;
     }
 
@@ -143,6 +145,16 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     setLaser(null);
   };
 
+  // Manage overheat lockout state
+  useEffect(() => {
+    if (gameState.heat >= 1.0) {
+      setIsOverheatLockout(true);
+    } else if (gameState.heat < 0.5) {
+      // Only clear lockout when heat drops below 50%
+      setIsOverheatLockout(false);
+    }
+  }, [gameState.heat]);
+
   // Update laser state when firing
   useEffect(() => {
     if (!shouldRenderGame || gameState.isPaused || gameState.gameOver) {
@@ -150,9 +162,8 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       return;
     }
 
-    const isOverheated = gameState.heat >= 1.0;
-
-    if (cannon.isFiring && !isOverheated) {
+    // Can't fire if in overheat lockout
+    if (cannon.isFiring && !isOverheatLockout) {
       const laserLength = 2000;
       const laserEndX = cannon.x + Math.cos(cannon.angle) * laserLength;
       const laserEndY = cannon.y + Math.sin(cannon.angle) * laserLength;
@@ -167,7 +178,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     } else {
       setLaser(null);
     }
-  }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, gameState.heat, cannon.isFiring, cannon.angle, cannon.x, cannon.y, setLaser]);
+  }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, isOverheatLockout, cannon.isFiring, cannon.angle, cannon.x, cannon.y, setLaser]);
 
   // Create sparks and explosions from hit objects
   useEffect(() => {
@@ -333,9 +344,8 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       ctx.globalAlpha = 1.0;
     }
 
-    // Draw laser beam if firing and not overheated
-    const isOverheated = gameState.heat >= 1.0;
-    if (cannon.isFiring && !gameState.isPaused && !gameState.gameOver && !isOverheated) {
+    // Draw laser beam if firing and not in overheat lockout
+    if (cannon.isFiring && !gameState.isPaused && !gameState.gameOver && !isOverheatLockout) {
       drawLaser(ctx, cannon, mousePos, laserIntensity, gameState.heat);
     }
 
