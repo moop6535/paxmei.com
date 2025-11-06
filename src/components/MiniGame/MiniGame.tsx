@@ -3,7 +3,7 @@
  * Canvas-based falling objects game that appears when all windows are minimized
  */
 
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useWindowStore } from '@stores/windowStore';
 import { useMediaQuery } from '@hooks/useMediaQuery';
 import { prefersReducedMotion } from '@/utils/responsive';
@@ -14,11 +14,15 @@ import styles from './MiniGame.module.css';
 
 const TASKBAR_HEIGHT = 48; // Match Desktop component
 
+interface MiniGameProps {
+  onExit?: () => void;
+}
+
 /**
  * MiniGame Component
  * Only renders when all windows are minimized (desktop idle state)
  */
-export default function MiniGame() {
+export default function MiniGame({ onExit }: MiniGameProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { isDesktop } = useMediaQuery();
   const windows = useWindowStore((state) => state.windows);
@@ -59,7 +63,14 @@ export default function MiniGame() {
     shouldRenderGame
   );
 
-  // Canvas click handler
+  // Click feedback state (shows brief flash on click)
+  const [clickFeedback, setClickFeedback] = useState<{
+    x: number;
+    y: number;
+    timestamp: number;
+  } | null>(null);
+
+  // Canvas click handler with visual feedback
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -67,6 +78,10 @@ export default function MiniGame() {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // Visual feedback (150ms flash)
+    setClickFeedback({ x, y, timestamp: Date.now() });
+    setTimeout(() => setClickFeedback(null), 150);
 
     // Handle restart if game over
     if (gameState.gameOver) {
@@ -76,6 +91,23 @@ export default function MiniGame() {
 
     handleClick(x, y);
   };
+
+  // ESC key handler (works during gameplay AND game over)
+  useEffect(() => {
+    if (!shouldRenderGame) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Signal parent to restore a window (exits idle state)
+        if (onExit) {
+          onExit();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [shouldRenderGame, onExit]);
 
   // Render loop
   useEffect(() => {
@@ -112,6 +144,15 @@ export default function MiniGame() {
       drawObject(ctx, obj);
     });
 
+    // Draw click feedback if active
+    if (clickFeedback) {
+      ctx.strokeStyle = GAME_COLORS.WHITE;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(clickFeedback.x, clickFeedback.y, 20, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     // Draw UI (score, strikes)
     drawUI(ctx, gameState);
 
@@ -119,7 +160,7 @@ export default function MiniGame() {
     if (gameState.gameOver) {
       drawGameOver(ctx, gameState.score, rect.width, rect.height);
     }
-  }, [shouldRenderGame, gameState]);
+  }, [shouldRenderGame, gameState, clickFeedback]);
 
   // Window resize handler
   useEffect(() => {

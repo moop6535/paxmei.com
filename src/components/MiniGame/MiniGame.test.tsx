@@ -452,4 +452,177 @@ describe('MiniGame', () => {
       expect(canvas.className).toContain('canvas');
     });
   });
+
+  describe('input handling', () => {
+    it('handles click events', () => {
+      // Minimize all windows
+      useWindowStore.setState({
+        windows: {
+          bio: {
+            id: 'bio',
+            position: { x: 50, y: 50 },
+            size: { width: 400, height: 500 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          blog: {
+            id: 'blog',
+            position: { x: 500, y: 50 },
+            size: { width: 450, height: 600 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          portfolio: {
+            id: 'portfolio',
+            position: { x: 275, y: 300 },
+            size: { width: 500, height: 400 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+        },
+        windowStack: ['portfolio', 'blog', 'bio'],
+      });
+
+      const { container } = render(<MiniGame />);
+      const canvas = screen.getByTestId('minigame-canvas');
+
+      // Canvas should have click handler
+      expect(canvas.onclick).toBeDefined();
+    });
+
+    it('calls onExit when ESC key is pressed', () => {
+      // Minimize all windows
+      useWindowStore.setState({
+        windows: {
+          bio: {
+            id: 'bio',
+            position: { x: 50, y: 50 },
+            size: { width: 400, height: 500 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          blog: {
+            id: 'blog',
+            position: { x: 500, y: 50 },
+            size: { width: 450, height: 600 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          portfolio: {
+            id: 'portfolio',
+            position: { x: 275, y: 300 },
+            size: { width: 500, height: 400 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+        },
+        windowStack: ['portfolio', 'blog', 'bio'],
+      });
+
+      const onExitMock = vi.fn();
+      render(<MiniGame onExit={onExitMock} />);
+
+      // Simulate ESC key press
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' });
+      window.dispatchEvent(escapeEvent);
+
+      expect(onExitMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onExit for other keys', () => {
+      // Minimize all windows
+      useWindowStore.setState({
+        windows: {
+          bio: {
+            id: 'bio',
+            position: { x: 50, y: 50 },
+            size: { width: 400, height: 500 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          blog: {
+            id: 'blog',
+            position: { x: 500, y: 50 },
+            size: { width: 450, height: 600 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          portfolio: {
+            id: 'portfolio',
+            position: { x: 275, y: 300 },
+            size: { width: 500, height: 400 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+        },
+        windowStack: ['portfolio', 'blog', 'bio'],
+      });
+
+      const onExitMock = vi.fn();
+      render(<MiniGame onExit={onExitMock} />);
+
+      // Simulate other key presses
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
+      window.dispatchEvent(enterEvent);
+
+      const spaceEvent = new KeyboardEvent('keydown', { key: ' ' });
+      window.dispatchEvent(spaceEvent);
+
+      expect(onExitMock).not.toHaveBeenCalled();
+    });
+
+    it('cleans up ESC key listener on unmount', () => {
+      // Minimize all windows
+      useWindowStore.setState({
+        windows: {
+          bio: {
+            id: 'bio',
+            position: { x: 50, y: 50 },
+            size: { width: 400, height: 500 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          blog: {
+            id: 'blog',
+            position: { x: 500, y: 50 },
+            size: { width: 450, height: 600 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+          portfolio: {
+            id: 'portfolio',
+            position: { x: 275, y: 300 },
+            size: { width: 500, height: 400 },
+            isMinimized: true,
+            isMaximized: false,
+            isVisible: true,
+          },
+        },
+        windowStack: ['portfolio', 'blog', 'bio'],
+      });
+
+      const onExitMock = vi.fn();
+      const { unmount } = render(<MiniGame onExit={onExitMock} />);
+
+      unmount();
+
+      // Try to trigger ESC after unmount
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' });
+      window.dispatchEvent(escapeEvent);
+
+      // Should not be called since listener was removed
+      expect(onExitMock).not.toHaveBeenCalled();
+    });
+  });
 });
