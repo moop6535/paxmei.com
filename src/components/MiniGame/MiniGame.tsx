@@ -10,7 +10,6 @@ import { prefersReducedMotion } from '@/utils/responsive';
 import { useGameLoop } from './useGameLoop';
 import type { GameObject, GameConfig, ScorePopup, Particle, Cannon } from './types';
 import { GAME_COLORS } from './types';
-import * as gameLogic from './gameLogic';
 import styles from './MiniGame.module.css';
 
 const TASKBAR_HEIGHT = 48; // Match Desktop component
@@ -61,7 +60,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
   // Game should be active whenever conditions are met
   // Pause state will be managed separately based on window visibility
-  const { gameState, handleClick, handleRestart, setPaused, updateObjects, setLaser, hitObjects } = useGameLoop(
+  const { gameState, handleRestart, setPaused, setLaser, hitObjects } = useGameLoop(
     config,
     shouldRenderGame
   );
@@ -76,7 +75,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
   }, [shouldRenderGame, isDesktopIdle, setPaused]);
 
   // Click feedback state (shows brief flash on click)
-  const [clickFeedback, setClickFeedback] = useState<{
+  const [clickFeedback] = useState<{
     x: number;
     y: number;
     timestamp: number;
@@ -89,7 +88,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
   // Cannon and laser state
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isMouseDown, setIsMouseDown] = useState<boolean>(false);
+  const [_isMouseDown, setIsMouseDown] = useState<boolean>(false);
   const [cannon, setCannon] = useState<Cannon>({
     x: window.innerWidth / 2,
     y: window.innerHeight - TASKBAR_HEIGHT - 40,
@@ -121,7 +120,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
   };
 
   // Mouse down handler - start firing laser
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseDown = () => {
     if (gameState.gameOver) {
       // Restart on click if game over
       handleRestart();
@@ -334,7 +333,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
     // Draw laser beam if firing and not in overheat lockout
     if (cannon.isFiring && !gameState.isPaused && !gameState.gameOver && !isOverheatLockout) {
-      drawLaser(ctx, cannon, mousePos, laserIntensity, gameState.heat);
+      drawLaser(ctx, cannon, laserIntensity, gameState.heat);
     }
 
     // Draw particles
@@ -430,45 +429,6 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       data-testid="minigame-canvas"
     />
   );
-}
-
-/**
- * Draw a game object with glow effect
- */
-function drawObjectWithGlow(ctx: CanvasRenderingContext2D, obj: GameObject) {
-  // Draw glow (outer shadow)
-  ctx.shadowColor = obj.color;
-  ctx.shadowBlur = 15;
-  ctx.strokeStyle = obj.color;
-  ctx.lineWidth = 5;
-
-  switch (obj.shape) {
-    case 'rect':
-      ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
-      break;
-    case 'circle':
-      ctx.beginPath();
-      ctx.arc(
-        obj.x + obj.width / 2,
-        obj.y + obj.height / 2,
-        obj.width / 2,
-        0,
-        Math.PI * 2
-      );
-      ctx.stroke();
-      break;
-    case 'triangle':
-      ctx.beginPath();
-      ctx.moveTo(obj.x + obj.width / 2, obj.y); // Top center
-      ctx.lineTo(obj.x + obj.width, obj.y + obj.height); // Bottom right
-      ctx.lineTo(obj.x, obj.y + obj.height); // Bottom left
-      ctx.closePath();
-      ctx.stroke();
-      break;
-  }
-
-  // Reset shadow
-  ctx.shadowBlur = 0;
 }
 
 /**
@@ -626,7 +586,6 @@ function drawCannon(ctx: CanvasRenderingContext2D, cannon: Cannon) {
 function drawLaser(
   ctx: CanvasRenderingContext2D,
   cannon: Cannon,
-  mousePos: { x: number; y: number },
   intensity: number,
   heat: number
 ) {

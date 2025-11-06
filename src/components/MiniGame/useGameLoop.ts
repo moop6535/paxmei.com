@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { GameState, GameConfig } from './types';
+import type { GameState, GameConfig, GameObject } from './types';
 import * as gameLogic from './gameLogic';
 import type { HitObjectInfo } from './gameLogic';
 
@@ -57,7 +57,7 @@ export function useGameLoop(
   isActive: boolean
 ): UseGameLoopReturn {
   const [gameState, setGameState] = useState<GameState>(createInitialState());
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const lastFrameTimeRef = useRef<number>(Date.now());
   const laserRef = useRef<LaserState | null>(null);
   const [hitObjects, setHitObjects] = useState<HitObjectInfo[]>([]);
