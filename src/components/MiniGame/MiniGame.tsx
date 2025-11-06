@@ -191,12 +191,10 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       if (hit.wasDestroyed) {
         // Big explosion for destroyed objects
         const timeSinceLastKill = now - lastCatchTime;
-        const isCombo = timeSinceLastKill < 800;
-        const newComboCount = isCombo ? comboCount + 1 : 0;
+        const isCombo = timeSinceLastKill < 800 && lastCatchTime > 0;
+        const newComboCount = isCombo ? comboCount + 1 : 1;
 
-        if (timeSinceLastKill >= 800 || comboCount === 0) {
-          setComboCount(newComboCount);
-        }
+        setComboCount(newComboCount);
         setLastCatchTime(now);
 
         const particleCount = 20 + newComboCount * 4;
@@ -240,6 +238,23 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       setParticles((prev) => [...prev, ...newParticles]);
     }
   }, [hitObjects, comboCount, lastCatchTime]);
+
+  // Reset combo after timeout
+  useEffect(() => {
+    if (comboCount === 0 || !shouldRenderGame || gameState.isPaused) return;
+
+    const checkComboTimeout = () => {
+      const now = Date.now();
+      const timeSinceLastKill = now - lastCatchTime;
+      if (timeSinceLastKill >= 800) {
+        setComboCount(0);
+      }
+    };
+
+    // Check every 100ms
+    const interval = setInterval(checkComboTimeout, 100);
+    return () => clearInterval(interval);
+  }, [comboCount, lastCatchTime, shouldRenderGame, gameState.isPaused]);
 
   // Animate visual effects
   useEffect(() => {
@@ -502,7 +517,7 @@ function drawUI(ctx: CanvasRenderingContext2D, state: GameState, combo: number) 
     ctx.font = 'bold 32px monospace';
     ctx.shadowColor = GAME_COLORS.YELLOW;
     ctx.shadowBlur = 10;
-    ctx.fillText(`${combo + 1}x COMBO!`, 20, 115);
+    ctx.fillText(`${combo}x COMBO!`, 20, 115);
     ctx.shadowBlur = 0;
   }
 
