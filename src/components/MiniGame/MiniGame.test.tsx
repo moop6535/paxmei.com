@@ -30,12 +30,18 @@ describe('MiniGame', () => {
           lineTo: vi.fn(),
           closePath: vi.fn(),
           scale: vi.fn(),
+          save: vi.fn(),
+          restore: vi.fn(),
+          translate: vi.fn(),
+          rotate: vi.fn(),
           fillStyle: '',
           strokeStyle: '',
           globalAlpha: 1,
           lineWidth: 0,
           font: '',
           textAlign: 'left',
+          shadowBlur: 0,
+          shadowColor: '',
         }) as any
     );
 

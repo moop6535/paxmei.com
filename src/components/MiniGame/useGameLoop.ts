@@ -15,6 +15,7 @@ interface UseGameLoopReturn {
   handleClick: (x: number, y: number) => void;
   handleRestart: () => void;
   setPaused: (paused: boolean) => void;
+  updateObjects: (objects: GameObject[], scoreIncrease: number) => void;
 }
 
 /**
@@ -153,5 +154,18 @@ export function useGameLoop(
     }));
   }, []);
 
-  return { gameState, handleClick, handleRestart, setPaused };
+  /**
+   * Update objects array directly (for laser damage)
+   * @param objects - New objects array
+   * @param scoreIncrease - Amount to increase score by
+   */
+  const updateObjects = useCallback((objects: GameObject[], scoreIncrease: number) => {
+    setGameState((prevState) => ({
+      ...prevState,
+      objects,
+      score: prevState.score + scoreIncrease,
+    }));
+  }, []);
+
+  return { gameState, handleClick, handleRestart, setPaused, updateObjects };
 }

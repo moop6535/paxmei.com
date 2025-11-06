@@ -35,10 +35,10 @@ export function getObjectSpeed(score: number): number {
 }
 
 /**
- * Generate a random game object
+ * Generate a random game object with health based on difficulty
  * @param config - Game configuration
  * @param currentTime - Current timestamp for unique ID
- * @param score - Current score (affects speed)
+ * @param score - Current score (affects speed and health)
  * @returns New game object
  */
 export function generateRandomShape(
@@ -51,10 +51,24 @@ export function generateRandomShape(
   const size =
     config.objectMinSize +
     Math.random() * (config.objectMaxSize - config.objectMinSize);
-  const color =
-    GAME_COLORS.OBJECT_COLORS[
-      Math.floor(Math.random() * GAME_COLORS.OBJECT_COLORS.length)
-    ];
+
+  // Assign health based on shape (and increase with score)
+  let maxHealth: number;
+  let color: string;
+
+  if (shape === 'rect') {
+    // Rectangles are weakest (1-3 hits)
+    maxHealth = 1 + Math.floor(score / 20);
+    color = GAME_COLORS.OBJECT_COLORS[2]; // #999999 (gray)
+  } else if (shape === 'circle') {
+    // Circles are medium (2-5 hits)
+    maxHealth = 2 + Math.floor(score / 15);
+    color = GAME_COLORS.OBJECT_COLORS[1]; // #cccccc (light gray)
+  } else {
+    // Triangles are toughest (3-7 hits)
+    maxHealth = 3 + Math.floor(score / 10);
+    color = GAME_COLORS.OBJECT_COLORS[0]; // #ffffff (white)
+  }
 
   return {
     id: `obj-${currentTime}-${Math.random()}`,
@@ -65,6 +79,8 @@ export function generateRandomShape(
     speed: getObjectSpeed(score),
     shape,
     color,
+    health: maxHealth,
+    maxHealth,
   };
 }
 
@@ -231,4 +247,178 @@ export function isPointInTriangle(
 
   // Point is inside if all barycentric coordinates are >= 0
   return a >= 0 && b >= 0 && c >= 0;
+}
+
+/**
+ * Apply laser damage to objects
+ * @param objects - Array of game objects
+ * @param laserStartX - Laser start X
+ * @param laserStartY - Laser start Y
+ * @param laserEndX - Laser end X
+ * @param laserEndY - Laser end Y
+ * @param damagePerFrame - Damage to apply per frame (default 0.1)
+ * @returns Updated objects and destroyed count
+ */
+export function applyLaserDamage(
+  objects: GameObject[],
+  laserStartX: number,
+  laserStartY: number,
+  laserEndX: number,
+  laserEndY: number,
+  damagePerFrame: number = 0.1
+): { objects: GameObject[]; destroyedCount: number } {
+  const updatedObjects: GameObject[] = [];
+  let destroyedCount = 0;
+
+  objects.forEach((obj) => {
+    let isHit = false;
+
+    // Check if laser intersects with object
+    switch (obj.shape) {
+      case 'rect':
+        isHit = lineIntersectsRect(laserStartX, laserStartY, laserEndX, laserEndY, obj);
+        break;
+      case 'circle':
+        isHit = lineIntersectsCircle(laserStartX, laserStartY, laserEndX, laserEndY, obj);
+        break;
+      case 'triangle':
+        isHit = lineIntersectsTriangle(laserStartX, laserStartY, laserEndX, laserEndY, obj);
+        break;
+    }
+
+    if (isHit) {
+      const newHealth = obj.health - damagePerFrame;
+      if (newHealth <= 0) {
+        destroyedCount++;
+        // Don't add to updated objects (destroyed)
+      } else {
+        updatedObjects.push({ ...obj, health: newHealth });
+      }
+    } else {
+      updatedObjects.push(obj);
+    }
+  });
+
+  return { objects: updatedObjects, destroyedCount };
+}
+
+/**
+ * Check if line segment intersects rectangle
+ */
+function lineIntersectsRect(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  obj: GameObject
+): boolean {
+  // Check if line endpoints are inside rect
+  if (isPointInRect(x1, y1, obj) || isPointInRect(x2, y2, obj)) {
+    return true;
+  }
+
+  // Check if line intersects any edge of rectangle
+  const left = obj.x;
+  const right = obj.x + obj.width;
+  const top = obj.y;
+  const bottom = obj.y + obj.height;
+
+  return (
+    lineIntersectsLine(x1, y1, x2, y2, left, top, right, top) ||
+    lineIntersectsLine(x1, y1, x2, y2, right, top, right, bottom) ||
+    lineIntersectsLine(x1, y1, x2, y2, right, bottom, left, bottom) ||
+    lineIntersectsLine(x1, y1, x2, y2, left, bottom, left, top)
+  );
+}
+
+/**
+ * Check if line segment intersects circle
+ */
+function lineIntersectsCircle(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  obj: GameObject
+): boolean {
+  const cx = obj.x + obj.width / 2;
+  const cy = obj.y + obj.height / 2;
+  const radius = obj.width / 2;
+
+  // Vector from line start to circle center
+  const dx = cx - x1;
+  const dy = cy - y1;
+
+  // Line direction vector
+  const lx = x2 - x1;
+  const ly = y2 - y1;
+
+  // Project circle center onto line
+  const dot = dx * lx + dy * ly;
+  const lenSq = lx * lx + ly * ly;
+  const t = Math.max(0, Math.min(1, dot / lenSq));
+
+  // Closest point on line to circle center
+  const closestX = x1 + t * lx;
+  const closestY = y1 + t * ly;
+
+  // Distance from circle center to closest point
+  const distX = cx - closestX;
+  const distY = cy - closestY;
+  const distSq = distX * distX + distY * distY;
+
+  return distSq <= radius * radius;
+}
+
+/**
+ * Check if line segment intersects triangle
+ */
+function lineIntersectsTriangle(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  obj: GameObject
+): boolean {
+  // Triangle vertices
+  const tx1 = obj.x + obj.width / 2; // Top center
+  const ty1 = obj.y;
+  const tx2 = obj.x + obj.width; // Bottom right
+  const ty2 = obj.y + obj.height;
+  const tx3 = obj.x; // Bottom left
+  const ty3 = obj.y + obj.height;
+
+  // Check if line endpoints are inside triangle
+  if (isPointInTriangle(x1, y1, obj) || isPointInTriangle(x2, y2, obj)) {
+    return true;
+  }
+
+  // Check if line intersects any edge of triangle
+  return (
+    lineIntersectsLine(x1, y1, x2, y2, tx1, ty1, tx2, ty2) ||
+    lineIntersectsLine(x1, y1, x2, y2, tx2, ty2, tx3, ty3) ||
+    lineIntersectsLine(x1, y1, x2, y2, tx3, ty3, tx1, ty1)
+  );
+}
+
+/**
+ * Check if two line segments intersect
+ */
+function lineIntersectsLine(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  x3: number,
+  y3: number,
+  x4: number,
+  y4: number
+): boolean {
+  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+  if (denom === 0) return false; // Parallel lines
+
+  const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+  const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+
+  return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
 }

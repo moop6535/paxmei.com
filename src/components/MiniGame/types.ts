@@ -30,6 +30,8 @@ export interface GameObject {
   speed: number; // Pixels per frame
   shape: ShapeType;
   color: string; // One of GAME_COLORS.OBJECT_COLORS
+  health: number; // Current health
+  maxHealth: number; // Maximum health
 }
 
 /**
@@ -102,4 +104,27 @@ export interface Particle {
   maxLife: number;
   color: string;
   size: number;
+}
+
+/**
+ * Cannon state
+ */
+export interface Cannon {
+  x: number; // Center X position
+  y: number; // Center Y position
+  angle: number; // Rotation angle in radians
+  width: number; // Cannon width
+  height: number; // Cannon height
+  isFiring: boolean;
+}
+
+/**
+ * Laser beam state
+ */
+export interface LaserBeam {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  intensity: number; // 0-1 for pulsing effect
 }

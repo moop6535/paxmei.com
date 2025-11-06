@@ -8,8 +8,9 @@ import { useWindowStore } from '@stores/windowStore';
 import { useMediaQuery } from '@hooks/useMediaQuery';
 import { prefersReducedMotion } from '@/utils/responsive';
 import { useGameLoop } from './useGameLoop';
-import type { GameObject, GameConfig, ScorePopup, Particle } from './types';
+import type { GameObject, GameConfig, ScorePopup, Particle, Cannon } from './types';
 import { GAME_COLORS } from './types';
+import * as gameLogic from './gameLogic';
 import styles from './MiniGame.module.css';
 
 const TASKBAR_HEIGHT = 48; // Match Desktop component
@@ -60,7 +61,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
   // Game should be active whenever conditions are met
   // Pause state will be managed separately based on window visibility
-  const { gameState, handleClick, handleRestart, setPaused } = useGameLoop(
+  const { gameState, handleClick, handleRestart, setPaused, updateObjects } = useGameLoop(
     config,
     shouldRenderGame
   );
@@ -88,8 +89,21 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
   const [comboCount, setComboCount] = useState<number>(0);
   const [strikeFlash, setStrikeFlash] = useState<number>(0);
 
-  // Canvas click handler with visual feedback
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Cannon and laser state
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isMouseDown, setIsMouseDown] = useState<boolean>(false);
+  const [cannon, setCannon] = useState<Cannon>({
+    x: window.innerWidth / 2,
+    y: window.innerHeight - TASKBAR_HEIGHT - 40,
+    angle: -Math.PI / 2, // Point upward initially
+    width: 60,
+    height: 30,
+    isFiring: false,
+  });
+  const [laserIntensity, setLaserIntensity] = useState<number>(0);
+
+  // Mouse move handler - update cannon angle and mouse position
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -97,12 +111,20 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Visual feedback (150ms flash)
-    setClickFeedback({ x, y, timestamp: Date.now() });
-    setTimeout(() => setClickFeedback(null), 150);
+    setMousePos({ x, y });
 
-    // Handle restart if game over
+    // Calculate angle from cannon to mouse
+    const dx = x - cannon.x;
+    const dy = y - cannon.y;
+    const angle = Math.atan2(dy, dx);
+
+    setCannon((prev) => ({ ...prev, angle }));
+  };
+
+  // Mouse down handler - start firing laser
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (gameState.gameOver) {
+      // Restart on click if game over
       handleRestart();
       setComboCount(0);
       setScorePopups([]);
@@ -110,56 +132,79 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       return;
     }
 
-    // Check for hit before click to add visual effects
-    const prevScore = gameState.score;
-    handleClick(x, y);
+    setIsMouseDown(true);
+    setCannon((prev) => ({ ...prev, isFiring: true }));
+  };
 
-    // Check if we got a hit by comparing score
-    setTimeout(() => {
-      if (gameState.score > prevScore) {
+  // Mouse up handler - stop firing laser
+  const handleMouseUp = () => {
+    setIsMouseDown(false);
+    setCannon((prev) => ({ ...prev, isFiring: false }));
+  };
+
+  // Apply laser damage when firing
+  useEffect(() => {
+    if (!shouldRenderGame || gameState.isPaused || gameState.gameOver || !cannon.isFiring) return;
+
+    const applyDamage = () => {
+      // Calculate laser beam endpoint (extend far past mouse)
+      const laserLength = 2000;
+      const laserEndX = cannon.x + Math.cos(cannon.angle) * laserLength;
+      const laserEndY = cannon.y + Math.sin(cannon.angle) * laserLength;
+
+      // Apply damage to objects
+      const result = gameLogic.applyLaserDamage(
+        gameState.objects,
+        cannon.x,
+        cannon.y,
+        laserEndX,
+        laserEndY,
+        0.08 // Damage per frame
+      );
+
+      if (result.destroyedCount > 0) {
+        // Update score and objects
+        updateObjects(result.objects, result.destroyedCount);
+
+        // Track combo
         const now = Date.now();
-        const timeSinceLastCatch = now - lastCatchTime;
-        const isCombo = timeSinceLastCatch < 800; // 800ms window for combo
-
-        // Update combo
+        const timeSinceLastKill = now - lastCatchTime;
+        const isCombo = timeSinceLastKill < 800;
         const newComboCount = isCombo ? comboCount + 1 : 0;
         setComboCount(newComboCount);
         setLastCatchTime(now);
 
-        // Create score popup
-        const scoreValue = isCombo && newComboCount > 0 ? newComboCount + 1 : 1;
-        const popup: ScorePopup = {
-          id: `popup-${now}`,
-          x,
-          y,
-          value: scoreValue,
-          timestamp: now,
-          isCombo: newComboCount > 0,
-        };
-        setScorePopups((prev) => [...prev, popup]);
+        // Create particles and score popups for each destroyed object
+        for (let i = 0; i < result.destroyedCount; i++) {
+          const particleCount = 12 + newComboCount * 2;
+          const newParticles: Particle[] = [];
 
-        // Create particle explosion
-        const newParticles: Particle[] = [];
-        const particleCount = 8 + newComboCount * 2;
-        for (let i = 0; i < particleCount; i++) {
-          const angle = (Math.PI * 2 * i) / particleCount;
-          const speed = 2 + Math.random() * 3;
-          newParticles.push({
-            id: `particle-${now}-${i}`,
-            x,
-            y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: 1,
-            maxLife: 1,
-            color: newComboCount > 0 ? GAME_COLORS.YELLOW : GAME_COLORS.WHITE,
-            size: 3 + newComboCount,
-          });
+          for (let j = 0; j < particleCount; j++) {
+            const angle = (Math.PI * 2 * j) / particleCount;
+            const speed = 3 + Math.random() * 4;
+            newParticles.push({
+              id: `particle-${now}-${i}-${j}`,
+              x: mousePos.x,
+              y: mousePos.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              life: 1,
+              maxLife: 1,
+              color: newComboCount > 0 ? GAME_COLORS.YELLOW : GAME_COLORS.CYAN,
+              size: 4 + newComboCount,
+            });
+          }
+          setParticles((prev) => [...prev, ...newParticles]);
         }
-        setParticles((prev) => [...prev, ...newParticles]);
+      } else {
+        // Update objects without score change
+        updateObjects(result.objects, 0);
       }
-    }, 16);
-  };
+    };
+
+    const interval = setInterval(applyDamage, 1000 / 60); // 60 FPS
+    return () => clearInterval(interval);
+  }, [shouldRenderGame, gameState.isPaused, gameState.gameOver, gameState.objects, cannon.isFiring, cannon.angle, cannon.x, cannon.y, mousePos, comboCount, lastCatchTime, updateObjects]);
 
   // Animate visual effects
   useEffect(() => {
@@ -167,6 +212,13 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
     const animateEffects = () => {
       const now = Date.now();
+
+      // Pulse laser intensity
+      if (cannon.isFiring) {
+        setLaserIntensity((prev) => (prev + 0.1) % 1);
+      } else {
+        setLaserIntensity(0);
+      }
 
       // Update particles
       setParticles((prev) =>
@@ -190,7 +242,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
     const interval = setInterval(animateEffects, 1000 / 60);
     return () => clearInterval(interval);
-  }, [shouldRenderGame, gameState.isPaused]);
+  }, [shouldRenderGame, gameState.isPaused, cannon.isFiring]);
 
   // Detect strikes and flash screen
   const prevStrikesRef = useRef(gameState.strikes);
@@ -257,6 +309,11 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       ctx.globalAlpha = 1.0;
     }
 
+    // Draw laser beam if firing
+    if (cannon.isFiring && !gameState.isPaused && !gameState.gameOver) {
+      drawLaser(ctx, cannon, mousePos, laserIntensity);
+    }
+
     // Draw particles
     particles.forEach((particle) => {
       ctx.fillStyle = particle.color;
@@ -267,10 +324,13 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       ctx.globalAlpha = 1.0;
     });
 
-    // Draw objects with glow
+    // Draw objects with glow and health bars
     gameState.objects.forEach((obj) => {
-      drawObjectWithGlow(ctx, obj);
+      drawObjectWithHealthBar(ctx, obj);
     });
+
+    // Draw cannon
+    drawCannon(ctx, cannon);
 
     // Draw click feedback if active
     if (clickFeedback) {
@@ -310,7 +370,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     if (gameState.gameOver) {
       drawGameOver(ctx, gameState.score, rect.width, rect.height);
     }
-  }, [shouldRenderGame, gameState, clickFeedback, scorePopups, particles, strikeFlash, comboCount]);
+  }, [shouldRenderGame, gameState, clickFeedback, scorePopups, particles, strikeFlash, comboCount, cannon, mousePos, laserIntensity]);
 
   // Window resize handler
   useEffect(() => {
@@ -340,7 +400,10 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       className={styles.canvas}
       width={window.innerWidth}
       height={window.innerHeight - TASKBAR_HEIGHT}
-      onClick={handleCanvasClick}
+      onMouseMove={handleMouseMove}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
       data-testid="minigame-canvas"
     />
   );
@@ -471,6 +534,151 @@ function drawGameOver(
   ctx.font = '20px monospace';
   ctx.fillStyle = GAME_COLORS.CYAN;
   ctx.fillText('Press ESC to exit', canvasWidth / 2, canvasHeight / 2 + 105);
+}
+
+/**
+ * Draw cannon at bottom center
+ */
+function drawCannon(ctx: CanvasRenderingContext2D, cannon: Cannon) {
+  ctx.save();
+  ctx.translate(cannon.x, cannon.y);
+  ctx.rotate(cannon.angle);
+
+  // Cannon barrel (rectangle extending from center)
+  ctx.fillStyle = GAME_COLORS.CYAN;
+  ctx.strokeStyle = GAME_COLORS.WHITE;
+  ctx.lineWidth = 3;
+
+  // Draw barrel
+  ctx.fillRect(0, -cannon.height / 4, cannon.width, cannon.height / 2);
+  ctx.strokeRect(0, -cannon.height / 4, cannon.width, cannon.height / 2);
+
+  // Draw cannon base (circle)
+  ctx.beginPath();
+  ctx.arc(0, 0, cannon.height / 2, 0, Math.PI * 2);
+  ctx.fillStyle = GAME_COLORS.WHITE;
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
+ * Draw laser beam from cannon to mouse
+ */
+function drawLaser(
+  ctx: CanvasRenderingContext2D,
+  cannon: Cannon,
+  mousePos: { x: number; y: number },
+  intensity: number
+) {
+  const laserLength = 2000;
+  const endX = cannon.x + Math.cos(cannon.angle) * laserLength;
+  const endY = cannon.y + Math.sin(cannon.angle) * laserLength;
+
+  // Outer glow
+  ctx.strokeStyle = GAME_COLORS.CYAN;
+  ctx.lineWidth = 12;
+  ctx.globalAlpha = 0.2 + intensity * 0.1;
+  ctx.shadowColor = GAME_COLORS.CYAN;
+  ctx.shadowBlur = 25;
+  ctx.beginPath();
+  ctx.moveTo(cannon.x, cannon.y);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // Middle layer
+  ctx.lineWidth = 6;
+  ctx.globalAlpha = 0.5 + intensity * 0.2;
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.moveTo(cannon.x, cannon.y);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // Core beam
+  ctx.strokeStyle = GAME_COLORS.WHITE;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.8 + intensity * 0.2;
+  ctx.shadowBlur = 5;
+  ctx.beginPath();
+  ctx.moveTo(cannon.x, cannon.y);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // Reset
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1.0;
+}
+
+/**
+ * Draw object with health bar
+ */
+function drawObjectWithHealthBar(ctx: CanvasRenderingContext2D, obj: GameObject) {
+  // Draw glow (outer shadow)
+  ctx.shadowColor = obj.color;
+  ctx.shadowBlur = 15;
+  ctx.strokeStyle = obj.color;
+  ctx.lineWidth = 5;
+
+  switch (obj.shape) {
+    case 'rect':
+      ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+      break;
+    case 'circle':
+      ctx.beginPath();
+      ctx.arc(
+        obj.x + obj.width / 2,
+        obj.y + obj.height / 2,
+        obj.width / 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+      break;
+    case 'triangle':
+      ctx.beginPath();
+      ctx.moveTo(obj.x + obj.width / 2, obj.y); // Top center
+      ctx.lineTo(obj.x + obj.width, obj.y + obj.height); // Bottom right
+      ctx.lineTo(obj.x, obj.y + obj.height); // Bottom left
+      ctx.closePath();
+      ctx.stroke();
+      break;
+  }
+
+  // Reset shadow
+  ctx.shadowBlur = 0;
+
+  // Draw health bar if object has taken damage
+  if (obj.health < obj.maxHealth) {
+    const barWidth = obj.width;
+    const barHeight = 6;
+    const barX = obj.x;
+    const barY = obj.y - 12;
+
+    // Background (red)
+    ctx.fillStyle = GAME_COLORS.RED;
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    // Health (green -> yellow -> red)
+    const healthPercent = obj.health / obj.maxHealth;
+    let healthColor;
+    if (healthPercent > 0.6) {
+      healthColor = GAME_COLORS.GREEN;
+    } else if (healthPercent > 0.3) {
+      healthColor = GAME_COLORS.YELLOW;
+    } else {
+      healthColor = GAME_COLORS.RED;
+    }
+
+    ctx.fillStyle = healthColor;
+    ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+    // Border
+    ctx.strokeStyle = GAME_COLORS.WHITE;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
+  }
 }
 
 // Import GameState type
