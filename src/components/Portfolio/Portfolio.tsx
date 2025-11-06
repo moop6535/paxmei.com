@@ -1,4 +1,5 @@
 import type { Project } from '@/types/content';
+import { CodeIcon } from '@components/Icons/Icons';
 import styles from './Portfolio.module.css';
 
 interface PortfolioProps {
@@ -11,64 +12,63 @@ export default function Portfolio({ projects }: PortfolioProps) {
       <h3 className={styles.heading}>Projects</h3>
 
       <div className={styles.projects}>
-        {projects.map((project) => (
-          <article key={project.id} className={styles.project}>
-            <h4 className={styles.projectName}>{project.name}</h4>
+        {projects.map((project) => {
+          const primaryLink = project.links?.live || project.links?.demo;
 
-            <p className={styles.projectDescription}>{project.description}</p>
+          return (
+            <article key={project.id} className={styles.project}>
+              {primaryLink ? (
+                <a
+                  href={primaryLink}
+                  className={styles.projectLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <h4 className={styles.projectName}>{project.name}</h4>
 
-            <div className={styles.technologies}>
-              {project.technologies.map((tech) => (
-                <span key={tech} className={styles.tech}>
-                  {tech}
-                </span>
-              ))}
-            </div>
+                  <p className={styles.projectDescription}>{project.description}</p>
 
-            {project.links && (
-              <div className={styles.links}>
-                {project.links.github && (
+                  <div className={styles.technologies}>
+                    {project.technologies.map((tech) => (
+                      <span key={tech} className={styles.tech}>
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </a>
+              ) : (
+                <>
+                  <h4 className={styles.projectName}>{project.name}</h4>
+
+                  <p className={styles.projectDescription}>{project.description}</p>
+
+                  <div className={styles.technologies}>
+                    {project.technologies.map((tech) => (
+                      <span key={tech} className={styles.tech}>
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {project.links?.github && (
+                <div className={styles.links}>
                   <a
                     href={project.links.github}
                     className={styles.link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    GitHub →
+                    <CodeIcon />
+                    <span>Code</span>
                   </a>
-                )}
-                {project.links.live && (
-                  <>
-                    {project.links.github && <span className={styles.separator}>|</span>}
-                    <a
-                      href={project.links.live}
-                      className={styles.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Live →
-                    </a>
-                  </>
-                )}
-                {project.links.demo && (
-                  <>
-                    {(project.links.github || project.links.live) && (
-                      <span className={styles.separator}>|</span>
-                    )}
-                    <a
-                      href={project.links.demo}
-                      className={styles.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Demo →
-                    </a>
-                  </>
-                )}
-              </div>
-            )}
-          </article>
-        ))}
+                </div>
+              )}
+            </article>
+          );
+        })}
       </div>
     </div>
   );
