@@ -56,6 +56,14 @@ src/components/MiniGame/
 ```typescript
 export type ShapeType = 'rect' | 'circle' | 'triangle';
 
+// Color palette (brutalist high-contrast)
+export const GAME_COLORS = {
+  WHITE: '#ffffff',
+  BLACK: '#000000',
+  RED: '#ff0000',
+  OBJECT_COLORS: ['#ffffff', '#cccccc', '#999999'], // White to gray spectrum
+} as const;
+
 export interface GameObject {
   id: string;
   x: number;
@@ -64,7 +72,7 @@ export interface GameObject {
   height: number;
   speed: number;
   shape: ShapeType;
-  color: string;
+  color: string; // One of GAME_COLORS.OBJECT_COLORS
 }
 
 export interface GameState {
@@ -104,7 +112,21 @@ export function getObjectSpeed(score: number): number {
 
 // Generate random shape
 export function generateRandomShape(config: GameConfig, currentTime: number, score: number): GameObject {
-  // Random position, size, shape, speed
+  const shapes: ShapeType[] = ['rect', 'circle', 'triangle'];
+  const shape = shapes[Math.floor(Math.random() * shapes.length)];
+  const size = config.objectMinSize + Math.random() * (config.objectMaxSize - config.objectMinSize);
+  const color = GAME_COLORS.OBJECT_COLORS[Math.floor(Math.random() * GAME_COLORS.OBJECT_COLORS.length)];
+
+  return {
+    id: `obj-${currentTime}-${Math.random()}`,
+    x: Math.random() * (config.canvasWidth - size),
+    y: -size, // Start just above viewport
+    width: size,
+    height: size,
+    speed: getObjectSpeed(score),
+    shape,
+    color,
+  };
 }
 
 // Update all objects positions
@@ -205,7 +227,6 @@ interface UseGameLoopReturn {
   gameState: GameState;
   handleClick: (x: number, y: number) => void;
   handleRestart: () => void;
-  handleExit: () => void;
 }
 
 export function useGameLoop(
@@ -293,12 +314,7 @@ export function useGameLoop(
     setGameState(initialState);
   }, []);
 
-  // Exit handler (for ESC key)
-  const handleExit = useCallback(() => {
-    // Will be handled by parent component
-  }, []);
-
-  return { gameState, handleClick, handleRestart, handleExit };
+  return { gameState, handleClick, handleRestart };
 }
 ```
 
@@ -365,13 +381,29 @@ src/components/MiniGame/
 
 **MiniGame.tsx** (Rendering Logic):
 ```typescript
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { useGameLoop } from './useGameLoop';
-import { GameObject, GameConfig } from './types';
+import { GameObject, GameConfig, GAME_COLORS } from './types';
 import styles from './MiniGame.module.css';
+
+const TASKBAR_HEIGHT = 48; // Match Desktop component
 
 export default function MiniGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Game configuration
+  const config: GameConfig = useMemo(() => ({
+    canvasWidth: window.innerWidth,
+    canvasHeight: window.innerHeight - TASKBAR_HEIGHT,
+    maxObjects: 40,
+    maxStrikes: 3,
+    baseSpawnInterval: 1500,
+    minSpawnInterval: 800,
+    baseSpeed: 2,
+    objectMinSize: 40,
+    objectMaxSize: 60,
+  }), []);
+
   const { gameState, handleClick, handleRestart } = useGameLoop(config, true);
 
   // Render loop
@@ -382,12 +414,25 @@ export default function MiniGame() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Handle high DPI displays
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    canvas.style.width = `${rect.width}px`;
+    canvas.style.height = `${rect.height}px`;
+
     // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, rect.width, rect.height);
 
     // Draw semi-transparent background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = GAME_COLORS.BLACK;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.globalAlpha = 1.0;
 
     // Draw objects
     gameState.objects.forEach(obj => {
@@ -452,29 +497,31 @@ function drawObject(ctx: CanvasRenderingContext2D, obj: GameObject) {
 }
 
 function drawUI(ctx: CanvasRenderingContext2D, state: GameState) {
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = GAME_COLORS.WHITE;
   ctx.font = '24px monospace';
   ctx.fillText(`SCORE: ${state.score}`, 20, 40);
 
-  ctx.fillStyle = state.strikes > 0 ? '#ff0000' : '#ffffff';
+  ctx.fillStyle = state.strikes > 0 ? GAME_COLORS.RED : GAME_COLORS.WHITE;
   ctx.fillText(`STRIKES: ${state.strikes}/3`, 20, 75);
 }
 
-function drawGameOver(ctx: CanvasRenderingContext2D, score: number, onRestart: () => void) {
+function drawGameOver(ctx: CanvasRenderingContext2D, score: number, canvasWidth: number, canvasHeight: number) {
   // Game over overlay
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.fillStyle = GAME_COLORS.BLACK;
+  ctx.globalAlpha = 0.9;
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  ctx.globalAlpha = 1.0;
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = GAME_COLORS.WHITE;
   ctx.font = '48px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('GAME OVER', ctx.canvas.width / 2, ctx.canvas.height / 2 - 50);
+  ctx.fillText('GAME OVER', canvasWidth / 2, canvasHeight / 2 - 50);
 
   ctx.font = '32px monospace';
-  ctx.fillText(`SCORE: ${score}`, ctx.canvas.width / 2, ctx.canvas.height / 2 + 10);
+  ctx.fillText(`SCORE: ${score}`, canvasWidth / 2, canvasHeight / 2 + 10);
 
   ctx.font = '20px monospace';
-  ctx.fillText('Click to restart', ctx.canvas.width / 2, ctx.canvas.height / 2 + 60);
+  ctx.fillText('Click to restart', canvasWidth / 2, canvasHeight / 2 + 60);
 }
 ```
 
@@ -534,10 +581,10 @@ Remove MiniGame.tsx and .module.css, keep Phase 1 & 2
 **Status**: pending
 
 #### Objectives
-- Implement click feedback (visual flash on hit)
-- Add ESC key handler for accessibility
+- Implement click feedback (visual flash on hit) integrated into render loop
+- Add ESC key handler for accessibility (works during gameplay AND game over)
 - Handle game restart from game over screen
-- Add click debouncing for multiple rapid clicks
+- Ensure input handling doesn't cause performance issues
 
 #### Deliverables
 - [ ] Click feedback animation
@@ -551,8 +598,8 @@ Remove MiniGame.tsx and .module.css, keep Phase 1 & 2
 ```typescript
 // Add to MiniGame component:
 
-// Click feedback state
-const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number } | null>(null);
+// Click feedback state (integrated into game state)
+const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number; timestamp: number } | null>(null);
 
 // Enhanced click handler with feedback
 const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -563,8 +610,8 @@ const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  // Visual feedback
-  setClickFeedback({ x, y });
+  // Visual feedback (150ms flash)
+  setClickFeedback({ x, y, timestamp: Date.now() });
   setTimeout(() => setClickFeedback(null), 150);
 
   // Handle game restart if game over
@@ -576,33 +623,32 @@ const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
   handleClick(x, y);
 };
 
-// ESC key handler
+// ESC key handler (works during gameplay AND game over)
 useEffect(() => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      handleExit();
+      // Signal parent to restore a window (handled in Phase 5)
+      if (onExit) onExit();
     }
   };
 
   window.addEventListener('keydown', handleKeyDown);
   return () => window.removeEventListener('keydown', handleKeyDown);
-}, [handleExit]);
+}, [onExit]);
 
-// Render click feedback
+// Update render loop to include click feedback
 useEffect(() => {
-  if (!clickFeedback) return;
+  // ... existing render code ...
 
-  const canvas = canvasRef.current;
-  const ctx = canvas?.getContext('2d');
-  if (!ctx) return;
-
-  // Draw white flash circle at click position
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(clickFeedback.x, clickFeedback.y, 20, 0, Math.PI * 2);
-  ctx.stroke();
-}, [clickFeedback, gameState]);
+  // Draw click feedback if active
+  if (clickFeedback) {
+    ctx.strokeStyle = GAME_COLORS.WHITE;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(clickFeedback.x, clickFeedback.y, 20, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}, [gameState, clickFeedback]);
 ```
 
 #### Acceptance Criteria
@@ -720,19 +766,25 @@ interface MiniGameProps {
 }
 
 export default function MiniGame({ onExit }: MiniGameProps) {
-  // ... existing code ...
+  // ... existing code from Phase 3 and 4 ...
 
-  // Update handleExit to call parent's onExit
-  const handleExitInternal = useCallback(() => {
-    onExit?.();
-  }, [onExit]);
+  // ESC key already handled in Phase 4, onExit prop ready
 
-  // Pass handleExitInternal to useGameLoop
-  const { gameState, handleClick, handleRestart } = useGameLoop(
-    config,
-    true,
-    handleExitInternal
-  );
+  // Add window resize handler
+  useEffect(() => {
+    const handleResize = () => {
+      // Update canvas size on resize
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // ... rest of component
 }
@@ -757,9 +809,11 @@ const handleGameExit = useCallback(() => {
 - [ ] Game does not render on mobile (isMobile check)
 - [ ] Game does not render when prefers-reduced-motion enabled
 - [ ] Game does not render on viewports <1024x768
-- [ ] ESC key restores a window (exits idle state)
+- [ ] ESC key restores a window (exits idle state) - works during gameplay and game over
 - [ ] Opening any window hides game immediately
+- [ ] Window resize during gameplay updates canvas correctly
 - [ ] Bundle size increase <20KB gzipped (verify with build analysis)
+- [ ] High DPI displays render sharply (devicePixelRatio scaling)
 - [ ] No console errors or warnings
 - [ ] Code can be disabled by commenting 2 lines
 
@@ -899,7 +953,53 @@ Phase 5 (Integration)
 - [ ] Playtesting for difficulty balance
 
 ## Self-Review Notes
-*To be populated after initial plan review*
+
+### Issues Identified and Resolutions:
+
+1. **Color Palette Unspecified** ✅
+   - **Issue**: "High-contrast colors" mentioned but exact values not defined
+   - **Resolution**: Added specific color constants section to Phase 1
+   - **Impact**: Ensures consistent brutalist aesthetic
+
+2. **Config Object Location Unclear** ✅
+   - **Issue**: GameConfig used in Phase 2 but instantiation not specified
+   - **Resolution**: Move config instantiation to Phase 3 (MiniGame component)
+   - **Impact**: Clear ownership of configuration
+
+3. **Exit Handler Flow Convoluted** ✅
+   - **Issue**: Exit handler passed through multiple layers but doesn't control anything
+   - **Resolution**: Simplify - ESC key should restore a window directly in Phase 5
+   - **Impact**: Clearer separation of concerns
+
+4. **Canvas Resize Handling Missing** ✅
+   - **Issue**: Window resize during gameplay not explicitly handled
+   - **Resolution**: Add resize listener in Phase 5 integration
+   - **Impact**: Prevents coordinate misalignment bugs
+
+5. **High DPI Mitigation Not Detailed** ✅
+   - **Issue**: Risk mentioned but no implementation details
+   - **Resolution**: Add devicePixelRatio scaling to Phase 3 rendering
+   - **Impact**: Sharp rendering on retina displays
+
+6. **Click Feedback Integration** ✅
+   - **Issue**: Phase 4 click feedback might interfere with Phase 3 render loop
+   - **Resolution**: Integrate click feedback into main render loop, not separate
+   - **Impact**: Single render path, no conflicts
+
+7. **Object Color Strategy Undefined** ✅
+   - **Issue**: Objects have "color" field but generation not specified
+   - **Resolution**: Define color palette and random selection in Phase 1
+   - **Impact**: Consistent visual variety
+
+8. **Hardcoded Taskbar Height** ✅
+   - **Issue**: "48" hardcoded, should be constant
+   - **Resolution**: Reference from Desktop component or define constant
+   - **Impact**: Maintainability and correctness
+
+9. **ESC Key Scope Unclear** ✅
+   - **Issue**: ESC mentioned in Phase 4 but should work during gameplay too
+   - **Resolution**: Clarify ESC works always (gameplay + game over)
+   - **Impact**: Consistent exit mechanism
 
 ## Approval
 - [ ] Technical Lead Review (Self - SPIDER-SOLO)
