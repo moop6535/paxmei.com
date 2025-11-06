@@ -53,6 +53,8 @@ When all windows are minimized on the desktop view, users see only the particle 
 - [ ] No localStorage usage (ephemeral only)
 - [ ] Works on desktop viewport sizes only (minimum 1024x768)
 - [ ] Respects prefers-reduced-motion (game disabled entirely)
+- [ ] **Code is fully isolated and can be disabled by commenting 1-2 lines**
+- [ ] All game code contained in `src/components/MiniGame/` directory
 - [ ] All tests pass with >80% coverage (game logic)
 - [ ] Documentation updated (README, component docs)
 
@@ -66,6 +68,12 @@ When all windows are minimized on the desktop view, users see only the particle 
 - React + TypeScript + CSS Modules architecture
 - Zustand for state management (if needed)
 - Minimum viewport: 1024x768 (game disabled below this)
+- **CRITICAL: Maximum Code Isolation**
+  - All game code in dedicated `src/components/MiniGame/` directory
+  - Single integration point in Desktop component (one import, one component)
+  - Must be easily removable by commenting out 1-2 lines
+  - No spread of game logic across multiple files outside MiniGame directory
+  - Self-contained with no dependencies on other site components
 
 ### Business Constraints
 - Must maintain site performance benchmarks
@@ -263,12 +271,37 @@ const shouldRenderGame = isDesktopIdle &&
 ```
 src/components/
   MiniGame/
-    MiniGame.tsx         # Main game component
+    index.ts             # Clean export (export { default } from './MiniGame')
+    MiniGame.tsx         # Main game component (self-contained)
     MiniGame.module.css  # Brutalist styling
     useGameLoop.ts       # Game loop hook
     gameLogic.ts         # Core game logic (pure functions)
     types.ts             # Game types
 ```
+
+### Integration Pattern (Easy Removal)
+```tsx
+// In Desktop.tsx - SINGLE integration point
+import MiniGame from '@components/MiniGame'; // [1] Comment this line to disable
+
+export default function Desktop({ children, mobileContent }: DesktopProps) {
+  // ... existing code ...
+
+  return (
+    <div className={styles.desktop}>
+      <canvas ref={canvasRef} className={styles.canvas} />
+      <div className={styles.content}>{children}</div>
+      <MiniGame /> {/* [2] Comment this line to disable */}
+      <Taskbar />
+    </div>
+  );
+}
+```
+
+**Removal Process**:
+1. Comment out 2 lines in Desktop.tsx (import + component)
+2. Optionally delete `src/components/MiniGame/` directory
+3. No other files touched, no side effects
 
 ### Game State Interface
 ```typescript
@@ -385,8 +418,19 @@ const getObjectSpeed = (score: number): number => {
 - Added explicit XSS safety note (no user-generated content)
 - Expanded edge case coverage (viewport size, object cap)
 
+### User Feedback Incorporated (2025-11-06):
+
+9. **Code Isolation Requirement** ✅
+   - **Requirement**: Code must be isolated and easily removable by commenting 1-2 lines
+   - **Resolution**:
+     - All game code in dedicated `src/components/MiniGame/` directory
+     - Single integration point in Desktop.tsx (one import, one component)
+     - No game logic spread across codebase
+     - Documented removal process (comment 2 lines)
+   - **Impact**: Feature can be disabled instantly without code surgery
+
 ### Confidence Level:
-High - Specification is now comprehensive and implementation-ready. All ambiguities resolved.
+High - Specification is now comprehensive and implementation-ready. All ambiguities resolved. Code isolation ensures feature remains optional and non-invasive.
 
 ## Approval
 - [ ] Technical Lead Review (Self - SPIDER-SOLO)
