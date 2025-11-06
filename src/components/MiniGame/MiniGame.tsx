@@ -331,8 +331,9 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       ctx.globalAlpha = 1.0;
     }
 
-    // Draw laser beam if firing
-    if (cannon.isFiring && !gameState.isPaused && !gameState.gameOver) {
+    // Draw laser beam if firing and not overheated
+    const isOverheated = gameState.heat >= 1.0;
+    if (cannon.isFiring && !gameState.isPaused && !gameState.gameOver && !isOverheated) {
       drawLaser(ctx, cannon, mousePos, laserIntensity, gameState.heat);
     }
 
