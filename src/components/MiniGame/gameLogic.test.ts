@@ -32,39 +32,39 @@ describe('gameLogic', () => {
 
   describe('getSpawnInterval', () => {
     it('returns base interval at score 0', () => {
-      expect(getSpawnInterval(0)).toBe(1500);
+      expect(getSpawnInterval(0)).toBe(2000);
     });
 
     it('decreases interval as score increases (faster ramp-up)', () => {
-      expect(getSpawnInterval(10)).toBe(1250); // 1500 - 10*25
-      expect(getSpawnInterval(30)).toBe(750);  // 1500 - 30*25
+      expect(getSpawnInterval(10)).toBe(1850); // 2000 - 10*15
+      expect(getSpawnInterval(30)).toBe(1550); // 2000 - 30*15
     });
 
     it('caps at minimum interval (600ms)', () => {
-      expect(getSpawnInterval(50)).toBe(600);  // 1500 - 50*25 = 250, capped
-      expect(getSpawnInterval(100)).toBe(600);
-      expect(getSpawnInterval(200)).toBe(600);
+      expect(getSpawnInterval(70)).toBe(1000); // 2000 - 70*15 = 950, capped at 1000
+      expect(getSpawnInterval(100)).toBe(1000);
+      expect(getSpawnInterval(200)).toBe(1000);
     });
 
     it('handles negative scores gracefully', () => {
-      expect(getSpawnInterval(-10)).toBe(1500); // Should max out
+      expect(getSpawnInterval(-10)).toBe(2000); // Should max out
     });
   });
 
   describe('getObjectSpeed', () => {
     it('returns base speed at score 0', () => {
-      expect(getObjectSpeed(0)).toBe(2);
+      expect(getObjectSpeed(0)).toBe(1.5);
     });
 
     it('increases speed linearly with score (faster ramp-up)', () => {
-      expect(getObjectSpeed(10)).toBe(3.2);  // 2 + 10*0.12
-      expect(getObjectSpeed(20)).toBe(4.4);  // 2 + 20*0.12
-      expect(getObjectSpeed(50)).toBe(8.0);  // 2 + 50*0.12
+      expect(getObjectSpeed(10)).toBe(2.3);  // 1.5 + 10*0.08
+      expect(getObjectSpeed(20)).toBe(3.1);  // 1.5 + 20*0.08
+      expect(getObjectSpeed(50)).toBe(5.5);  // 1.5 + 50*0.08
     });
 
     it('continues increasing without cap', () => {
-      expect(getObjectSpeed(100)).toBe(14);  // 2 + 100*0.12
-      expect(getObjectSpeed(200)).toBe(26);  // 2 + 200*0.12
+      expect(getObjectSpeed(100)).toBe(9.5);  // 1.5 + 100*0.08
+      expect(getObjectSpeed(200)).toBe(17.5); // 1.5 + 200*0.08
     });
   });
 
@@ -103,8 +103,8 @@ describe('gameLogic', () => {
       const obj1 = generateRandomShape(mockConfig, Date.now(), 0);
       const obj2 = generateRandomShape(mockConfig, Date.now(), 20);
 
-      expect(obj1.speed).toBe(2);
-      expect(obj2.speed).toBe(4.4); // 2 + 20*0.12
+      expect(obj1.speed).toBe(1.5);
+      expect(obj2.speed).toBe(3.1); // 1.5 + 20*0.08
     });
 
     it('creates unique IDs', () => {

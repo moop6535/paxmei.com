@@ -45,6 +45,7 @@ export interface GameState {
   isPaused: boolean;
   lastSpawnTime: number; // Timestamp for spawn rate control
   difficultyMultiplier: number; // Increases with score
+  heat: number; // 0-1, laser overheats at 1.0
 }
 
 /**

@@ -43,6 +43,7 @@ const createInitialState = (): GameState => ({
   isPaused: false,
   lastSpawnTime: Date.now(),
   difficultyMultiplier: 1,
+  heat: 0,
 });
 
 /**
@@ -80,9 +81,21 @@ export function useGameLoop(
           deltaTime
         );
 
-        // Apply laser damage if firing
+        // Update heat
+        let newHeat = prevState.heat;
+        const isOverheated = prevState.heat >= 1.0;
+
+        if (laserRef.current && laserRef.current.isFiring && !isOverheated) {
+          // Build heat while firing (not overheated)
+          newHeat = Math.min(1.0, prevState.heat + 0.015);
+        } else {
+          // Cool down when not firing or overheated
+          newHeat = Math.max(0, prevState.heat - 0.008);
+        }
+
+        // Apply laser damage if firing and not overheated
         let scoreIncrease = 0;
-        if (laserRef.current && laserRef.current.isFiring) {
+        if (laserRef.current && laserRef.current.isFiring && !isOverheated) {
           const laserResult = gameLogic.applyLaserDamage(
             objects,
             laserRef.current.startX,
@@ -135,6 +148,7 @@ export function useGameLoop(
           gameOver,
           lastSpawnTime,
           score: prevState.score + scoreIncrease,
+          heat: newHeat,
         };
       });
 

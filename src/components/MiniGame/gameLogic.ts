@@ -14,24 +14,24 @@ import { GAME_COLORS } from './types';
 
 /**
  * Calculate spawn interval based on score (difficulty progression)
- * Starts at 1500ms, decreases to minimum 600ms (faster ramp-up)
+ * Starts at 2000ms, decreases to minimum 1000ms (slower ramp-up)
  * @param score - Current game score
  * @returns Spawn interval in milliseconds
  */
 export function getSpawnInterval(score: number): number {
   const safeScore = Math.max(0, score); // Clamp to 0 or positive
-  return Math.max(600, 1500 - safeScore * 25);
+  return Math.max(1000, 2000 - safeScore * 15);
 }
 
 /**
  * Calculate object speed based on score (difficulty progression)
- * Speed increases linearly with score (faster ramp-up)
+ * Speed increases linearly with score (slower ramp-up)
  * @param score - Current game score
  * @returns Speed in pixels per frame
  */
 export function getObjectSpeed(score: number): number {
   const safeScore = Math.max(0, score); // Clamp to 0 or positive
-  return 2 + safeScore * 0.12;
+  return 1.5 + safeScore * 0.08;
 }
 
 /**
@@ -57,16 +57,16 @@ export function generateRandomShape(
   let color: string;
 
   if (shape === 'rect') {
-    // Rectangles are weakest (1-3 hits)
-    maxHealth = 1 + Math.floor(score / 20);
+    // Rectangles are weakest (1-2 hits, reduced)
+    maxHealth = 1 + Math.floor(score / 30);
     color = GAME_COLORS.OBJECT_COLORS[2]; // #999999 (gray)
   } else if (shape === 'circle') {
-    // Circles are medium (2-5 hits)
-    maxHealth = 2 + Math.floor(score / 15);
+    // Circles are medium (1-3 hits, reduced)
+    maxHealth = 1 + Math.floor(score / 20);
     color = GAME_COLORS.OBJECT_COLORS[1]; // #cccccc (light gray)
   } else {
-    // Triangles are toughest (3-7 hits)
-    maxHealth = 3 + Math.floor(score / 10);
+    // Triangles are toughest (2-4 hits, reduced)
+    maxHealth = 2 + Math.floor(score / 15);
     color = GAME_COLORS.OBJECT_COLORS[0]; // #ffffff (white)
   }
 

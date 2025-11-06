@@ -43,16 +43,16 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     window.innerWidth >= 1024 &&
     window.innerHeight >= 768;
 
-  // Game configuration
+  // Game configuration (reduced difficulty)
   const config: GameConfig = useMemo(
     () => ({
       canvasWidth: window.innerWidth,
       canvasHeight: window.innerHeight - TASKBAR_HEIGHT,
-      maxObjects: 40,
+      maxObjects: 25, // Reduced from 40
       maxStrikes: 3,
-      baseSpawnInterval: 1500,
-      minSpawnInterval: 600,
-      baseSpeed: 2,
+      baseSpawnInterval: 2000, // Increased from 1500
+      minSpawnInterval: 1000, // Increased from 600
+      baseSpeed: 1.5, // Reduced from 2
       objectMinSize: 40,
       objectMaxSize: 60,
     }),
@@ -333,7 +333,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
 
     // Draw laser beam if firing
     if (cannon.isFiring && !gameState.isPaused && !gameState.gameOver) {
-      drawLaser(ctx, cannon, mousePos, laserIntensity);
+      drawLaser(ctx, cannon, mousePos, laserIntensity, gameState.heat);
     }
 
     // Draw particles
@@ -492,6 +492,50 @@ function drawUI(ctx: CanvasRenderingContext2D, state: GameState, combo: number) 
     ctx.fillText(`${combo + 1}x COMBO!`, 20, 115);
     ctx.shadowBlur = 0;
   }
+
+  // Heat bar
+  const barWidth = 250;
+  const barHeight = 20;
+  const barX = 20;
+  const barY = combo > 0 ? 150 : 110;
+
+  // Label
+  const isOverheated = state.heat >= 1.0;
+  ctx.fillStyle = isOverheated ? GAME_COLORS.RED : GAME_COLORS.WHITE;
+  ctx.font = '20px monospace';
+  ctx.fillText(isOverheated ? 'OVERHEATED!' : 'HEAT', barX, barY - 5);
+
+  // Background
+  ctx.fillStyle = GAME_COLORS.BLACK;
+  ctx.fillRect(barX, barY, barWidth, barHeight);
+
+  // Heat fill (color based on heat level)
+  let heatColor;
+  if (state.heat < 0.5) {
+    heatColor = GAME_COLORS.CYAN;
+  } else if (state.heat < 0.75) {
+    heatColor = GAME_COLORS.YELLOW;
+  } else {
+    heatColor = GAME_COLORS.RED;
+  }
+
+  ctx.fillStyle = heatColor;
+  ctx.fillRect(barX, barY, barWidth * state.heat, barHeight);
+
+  // Border
+  ctx.strokeStyle = GAME_COLORS.WHITE;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+  // Overheat warning flash
+  if (isOverheated) {
+    ctx.shadowColor = GAME_COLORS.RED;
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = GAME_COLORS.RED;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+    ctx.shadowBlur = 0;
+  }
 }
 
 /**
@@ -592,17 +636,36 @@ function drawLaser(
   ctx: CanvasRenderingContext2D,
   cannon: Cannon,
   mousePos: { x: number; y: number },
-  intensity: number
+  intensity: number,
+  heat: number
 ) {
   const laserLength = 2000;
   const endX = cannon.x + Math.cos(cannon.angle) * laserLength;
   const endY = cannon.y + Math.sin(cannon.angle) * laserLength;
 
+  // Determine laser color based on heat level
+  let laserColor: string;
+  const isOverheated = heat >= 1.0;
+
+  if (isOverheated) {
+    // Overheated: flickering red effect
+    laserColor = Math.random() > 0.3 ? GAME_COLORS.RED : GAME_COLORS.YELLOW;
+  } else if (heat > 0.75) {
+    // Critical: red
+    laserColor = GAME_COLORS.RED;
+  } else if (heat > 0.5) {
+    // Warming: yellow
+    laserColor = GAME_COLORS.YELLOW;
+  } else {
+    // Cool: cyan
+    laserColor = GAME_COLORS.CYAN;
+  }
+
   // Outer glow
-  ctx.strokeStyle = GAME_COLORS.CYAN;
+  ctx.strokeStyle = laserColor;
   ctx.lineWidth = 12;
   ctx.globalAlpha = 0.2 + intensity * 0.1;
-  ctx.shadowColor = GAME_COLORS.CYAN;
+  ctx.shadowColor = laserColor;
   ctx.shadowBlur = 25;
   ctx.beginPath();
   ctx.moveTo(cannon.x, cannon.y);
