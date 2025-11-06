@@ -85,8 +85,6 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
   // Visual effects state
   const [scorePopups, setScorePopups] = useState<ScorePopup[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
-  const [lastCatchTime, setLastCatchTime] = useState<number>(0);
-  const [comboCount, setComboCount] = useState<number>(0);
   const [strikeFlash, setStrikeFlash] = useState<number>(0);
 
   // Cannon and laser state
@@ -127,7 +125,6 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     if (gameState.gameOver) {
       // Restart on click if game over
       handleRestart();
-      setComboCount(0);
       setScorePopups([]);
       setParticles([]);
       setIsOverheatLockout(false);
@@ -190,14 +187,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     hitObjects.forEach((hit) => {
       if (hit.wasDestroyed) {
         // Big explosion for destroyed objects
-        const timeSinceLastKill = now - lastCatchTime;
-        const isCombo = timeSinceLastKill < 800 && lastCatchTime > 0;
-        const newComboCount = isCombo ? comboCount + 1 : 1;
-
-        setComboCount(newComboCount);
-        setLastCatchTime(now);
-
-        const particleCount = 20 + newComboCount * 4;
+        const particleCount = 20;
         for (let i = 0; i < particleCount; i++) {
           const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.2;
           const speed = 4 + Math.random() * 5;
@@ -209,8 +199,8 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
             vy: Math.sin(angle) * speed,
             life: 1,
             maxLife: 1,
-            color: newComboCount > 0 ? GAME_COLORS.YELLOW : GAME_COLORS.CYAN,
-            size: 5 + newComboCount,
+            color: GAME_COLORS.CYAN,
+            size: 5,
           });
         }
       } else {
@@ -237,24 +227,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     if (newParticles.length > 0) {
       setParticles((prev) => [...prev, ...newParticles]);
     }
-  }, [hitObjects, comboCount, lastCatchTime]);
-
-  // Reset combo after timeout
-  useEffect(() => {
-    if (comboCount === 0 || !shouldRenderGame || gameState.isPaused) return;
-
-    const checkComboTimeout = () => {
-      const now = Date.now();
-      const timeSinceLastKill = now - lastCatchTime;
-      if (timeSinceLastKill >= 800) {
-        setComboCount(0);
-      }
-    };
-
-    // Check every 100ms
-    const interval = setInterval(checkComboTimeout, 100);
-    return () => clearInterval(interval);
-  }, [comboCount, lastCatchTime, shouldRenderGame, gameState.isPaused]);
+  }, [hitObjects]);
 
   // Animate visual effects
   useEffect(() => {
@@ -399,17 +372,17 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
       const yOffset = -age * 50; // Float upward
       const alpha = Math.max(0, 1 - age);
 
-      ctx.fillStyle = popup.isCombo ? GAME_COLORS.YELLOW : GAME_COLORS.GREEN;
+      ctx.fillStyle = GAME_COLORS.GREEN;
       ctx.globalAlpha = alpha;
-      ctx.font = popup.isCombo ? 'bold 32px monospace' : 'bold 24px monospace';
+      ctx.font = 'bold 24px monospace';
       ctx.textAlign = 'center';
-      const text = popup.isCombo ? `+${popup.value} COMBO!` : `+${popup.value}`;
+      const text = `+${popup.value}`;
       ctx.fillText(text, popup.x, popup.y + yOffset);
       ctx.globalAlpha = 1.0;
     });
 
-    // Draw UI (score, strikes, combo)
-    drawUI(ctx, gameState, comboCount);
+    // Draw UI (score, strikes, heat)
+    drawUI(ctx, gameState);
 
     // Draw pause overlay
     if (gameState.isPaused) {
@@ -420,7 +393,7 @@ export default function MiniGame({ onExit }: MiniGameProps = {}) {
     if (gameState.gameOver) {
       drawGameOver(ctx, gameState.score, rect.width, rect.height);
     }
-  }, [shouldRenderGame, gameState, clickFeedback, scorePopups, particles, strikeFlash, comboCount, cannon, mousePos, laserIntensity]);
+  }, [shouldRenderGame, gameState, clickFeedback, scorePopups, particles, strikeFlash, cannon, mousePos, laserIntensity, isOverheatLockout]);
 
   // Window resize handler
   useEffect(() => {
@@ -499,9 +472,9 @@ function drawObjectWithGlow(ctx: CanvasRenderingContext2D, obj: GameObject) {
 }
 
 /**
- * Draw UI (score, strikes, and combo)
+ * Draw UI (score, strikes, and heat)
  */
-function drawUI(ctx: CanvasRenderingContext2D, state: GameState, combo: number) {
+function drawUI(ctx: CanvasRenderingContext2D, state: GameState) {
   ctx.textAlign = 'left';
   ctx.fillStyle = GAME_COLORS.WHITE;
   ctx.font = 'bold 28px monospace';
@@ -511,21 +484,11 @@ function drawUI(ctx: CanvasRenderingContext2D, state: GameState, combo: number) 
   ctx.font = '24px monospace';
   ctx.fillText(`STRIKES: ${state.strikes}/3`, 20, 75);
 
-  // Show combo if active
-  if (combo > 0) {
-    ctx.fillStyle = GAME_COLORS.YELLOW;
-    ctx.font = 'bold 32px monospace';
-    ctx.shadowColor = GAME_COLORS.YELLOW;
-    ctx.shadowBlur = 10;
-    ctx.fillText(`${combo}x COMBO!`, 20, 115);
-    ctx.shadowBlur = 0;
-  }
-
   // Heat bar
   const barWidth = 250;
   const barHeight = 20;
   const barX = 20;
-  const barY = combo > 0 ? 150 : 110;
+  const barY = 110;
 
   // Label
   const isOverheated = state.heat >= 1.0;

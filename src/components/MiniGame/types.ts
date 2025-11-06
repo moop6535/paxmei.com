@@ -89,7 +89,6 @@ export interface ScorePopup {
   y: number;
   value: number;
   timestamp: number;
-  isCombo?: boolean;
 }
 
 /**
